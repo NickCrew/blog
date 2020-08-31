@@ -20,13 +20,10 @@ AUTHOR_FEED_ATOM = None
 AUTHOR_FEED_RSS = None
 
 # Blogroll
-LINKS = (('Pelican', 'https://getpelican.com/'),
-         ('Python.org', 'https://www.python.org/'),
-         ('Jinja2', 'https://palletsprojects.com/p/jinja/'),)
+LINKS = (('eBook Server', 'https://books.piggah.xyz'),)
 
 # Social widget
-SOCIAL = (('Github', 'https://github.com/NickCrew'),
-          ('Another social link', '#'),)
+SOCIAL = (('Github', 'https://github.com/NickCrew'),)
 
 DEFAULT_PAGINATION = 10
 
