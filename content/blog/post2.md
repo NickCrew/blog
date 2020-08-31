@@ -1,10 +1,10 @@
-Title: Post 1
+Title: Post 2
 Date: 2020-08-30
 Category: Blog
 Tags: updates
 Authors: Nick Ferguson
-Summary: Actual first post
+Summary: Actual second post
 
-# THIS IS PIGGAH BLOG.. 2.0
+# This is only a test
 ***
 

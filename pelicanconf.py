@@ -2,11 +2,14 @@
 # -*- coding: utf-8 -*- #
 
 AUTHOR = 'Nick Ferguson'
-SITENAME = 'Blog-o-Piggah'
-SITEURL = 'piggah.xyz/blog'
+SITENAME = 'piggah.xyz'
+SITEURL = 'https://piggah.xyz'
 
 PATH = 'content'
 ARTICLE_PATHS = ['blog']
+PAGE_PATHS = ['pages']
+PATH_METADATA = '(?P<path_no_ext>.*)\..*'
+ARTICLE_URL = ARTICLE_SAVE_AS = PAGE_URL = PAGE_SAVE_AS = '{path_no_ext}.html'
 
 TIMEZONE = 'America/New_York'
 
@@ -23,7 +26,9 @@ AUTHOR_FEED_RSS = None
 LINKS = (('eBook Server', 'https://books.piggah.xyz'),)
 
 # Social widget
-SOCIAL = (('Github', 'https://github.com/NickCrew'),)
+SOCIAL = (('Github', 'https://github.com/NickCrew'),
+          ('YouTube','https://www.youtube.com/channel/UC972wwbPrKXW-YlXCPGPbQw'),
+          ('Twitter', 'https://twitter.com/piggahmonster'),)
 
 DEFAULT_PAGINATION = 10
 
