@@ -8,6 +8,9 @@ OUTPUTDIR=$(BASEDIR)/output
 CONFFILE=$(BASEDIR)/pelicanconf.py
 PUBLISHCONF=$(BASEDIR)/publishconf.py
 
+#SSH_USER=nick
+#SSH_HOST=piggah.xyz
+#SSSH_TARGET_DIR=/var/www/html
 
 DEBUG ?= 0
 ifeq ($(DEBUG), 1)
@@ -68,6 +71,9 @@ devserver-global:
 
 publish:
 	"$(PELICAN)" "$(INPUTDIR)" -o "$(OUTPUTDIR)" -s "$(PUBLISHCONF)" $(PELICANOPTS)
+
+rsync_upload: publish
+	rsync -avc --delete $(OUTPUTDIR)/ $(SSH_USER)@$(SSH_HOST):$(SSH_TARGET_DIR)/
 
 
 .PHONY: html help clean regenerate serve serve-global devserver publish 

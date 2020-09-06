@@ -1,3 +1,5 @@
+venv/
+pelican-themes/
 __pycache__
 output/
 tags

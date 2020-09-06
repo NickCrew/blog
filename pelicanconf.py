@@ -5,6 +5,8 @@ AUTHOR = 'Nick Ferguson'
 SITENAME = 'piggah.xyz'
 SITEURL = 'https://piggah.xyz'
 
+THEME = "pelican-themes/tuxlite_tbs"
+
 PATH = 'content'
 ARTICLE_PATHS = ['blog']
 PAGE_PATHS = ['pages']
@@ -34,3 +36,9 @@ DEFAULT_PAGINATION = 10
 
 # Uncomment following line if you want document-relative URLs when developing
 RELATIVE_URLS = True
+
+DISPLAY_PAGES_ON_MENU = False
+MENUITEMS = (
+    ('Home', '/index.html'),
+    ('About', '/about.html')
+)

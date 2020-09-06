@@ -1,6 +1,6 @@
 Title: Post 2
 Date: 2020-08-30
-Category: Blog
+Category: Articles
 Tags: updates
 Authors: Nick Ferguson
 Summary: Actual second post
