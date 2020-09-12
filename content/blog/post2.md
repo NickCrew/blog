@@ -1,7 +1,7 @@
 Title: Post 2
 Date: 2020-08-30
-Category: Articles
-Tags: updates
+Category: Tutorials
+Tags: linux
 Authors: Nick Ferguson
 Summary: Actual second post
 
