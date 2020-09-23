@@ -51,6 +51,8 @@ DEFAULT_CATEGORY = 'News'
 TAG_URL = 'tag/{slug}.html'
 TAG_SAVE_AS = 'tag/{slug}.html'
 
+STATIC_PATHS = ['images', 'docbooks']
+
 YEAR_ARCHIVE_SAVE_AS = 'blog/{date:%Y}/index.html'
 MONTH_ARCHIVE_SAVE_AS = 'blog/{date:%Y}/{date:%b}/index.html'
 ARCHIVES_SAVE_AS = 'blog/index.html'

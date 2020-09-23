@@ -1,4 +1,4 @@
-Title: Life and Deaath of a Virtual Machine
+Title: Life and Death of a Virtual Machine
 Date: 2018-07-06
 Tags: lab, virtualization, applications
 Category: Articles

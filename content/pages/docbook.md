@@ -2,18 +2,18 @@ Title: Docbook Pages
 Summary: Documents spawned from various virtual adventures
 Slug: docbook
 
-##### [Virtual Infrastructure](../docbook/virt_infra.html)
+##### [Virtual Infrastructure](../docbooks/virt_infra.html)
 _*KVM/Qemu/Libvirt Hypervisor Stack*_  
 
-##### [Linux Docs](../docbook/linux.html)
+##### [Linux Docs](../docbooks/linux.html)
 _*Linux Administration*_  
 
-##### [Hosted Services](../docbook/services.html)
+##### [Hosted Services](../docbooks/services.html)
 _*HowTos for deploying various services*_
 
-##### [SW Development](../docbook/dev.html)
+##### [SW Development](../docbooks/dev.html)
 _*Development Environment Configurations*_
 
-##### [Tools](../docbook/dev_tools.html) 
+##### [Tools](../docbooks/dev_tools.html) 
 _*Utilities + HowTos for Infrastructure deployment and management*_
 

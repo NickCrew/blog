@@ -70,14 +70,14 @@ Diagrams
 ----
 
 ### Physical and Virtual Networks
-![Network Diagram](/img/network.png)  
-[View Larger](/img/network.png)  
+![Network Diagram](../images/network.png)  
+[View Larger](../images/network.png)  
 <p>  
 <p>
 
 ### Core Servers Organization, DNS Zones and Physical Layout  
-![Core Services & Zones Overview](/img/services.png)
-[View Larger](/img/services.png)
+![Core Services & Zones Overview](../images/services.png)
+[View Larger](../images/services.png)
 
 
 #### Core Services Summary
@@ -88,7 +88,7 @@ Software-Defined Networking powerhouse, allows for complex
 virtual networking setups. I have replaced Linux bridges with OVS and increased network functionality with the change. One benefit of using OVS is hosts on the same subnet do not 'leave' the OVS network, allowing fast communication at virtio speeds (up to 15Gbps).
 
 * __The Foreman, Katello and Puppet:__  
-Unattended installs, provisioning and life cycle management. This was a major project to get operational but it was well worth it. All of the standard processes involved in creating new machines is automated and it's an absolute joy once you get it going. [Read more about my use of The Foreman here.](/posts/a-vm-is-born/)
+Unattended installs, provisioning and life cycle management. This was a major project to get operational but it was well worth it. All of the standard processes involved in creating new machines is automated and it's an absolute joy once you get it going. [Read more about my use of The Foreman here.](/blog/life-and-death-of-a-vm/)
 
 * __LibreNMS:__  
 SNMP-based monitoring solution, collects a huge amount of data if desired and sends alerts to my phone. Allows me to discover historical patterns in all of my machines, including VMs. I plan to feed LibreNMS data into InfluxDB in order to generate some Grafana dashboards in the near-future. I also use __Netdata__ for real-time monitoring. It's very easy to set-up and I would recommend it for beginners looking to get a view into their system health.
@@ -109,4 +109,4 @@ I love LXD containers. Most of my VMs are Red Hat but I always have a couple Ubu
 My central source for Movies, Music and TV Shows! My QNAP mentioned earlier stores all of my media and the Plex server mounts it as an NFS share. I primarily use Plex to watch movies and TV shows. My (extensive) music library is loaded into my Plex library but I typically choose to play my music through iTunes. Plex is free and offers a fantastic UI and organization. It will transcode virtually any format, though I try to avoid the need for on-the-fly transcode due to the CPU load. You can share your Plex library with friends and family as if you were your own mini-Netflix service.
 
 
-And there you have it. The basics of my home lab, a place I spend a great deal of time and will hopefully be writing many more posts about in the future! I am currently a bit space and power-consumption constrained so most of my expansion from this point will be into AWS resources, which I will document all the same. I eagerly await the day I can install a 24U+ server rack at home, but for now the Lenovo is serving admirably, I plan smartly to maximize resources and AWS credits are plentiful for students!  
+And there you have it. The basics of my home lab, a place I spend a great deal of time and will hopefully be writing many more blog about in the future! I am currently a bit space and power-consumption constrained so most of my expansion from this point will be into AWS resources, which I will document all the same. I eagerly await the day I can install a 24U+ server rack at home, but for now the Lenovo is serving admirably, I plan smartly to maximize resources and AWS credits are plentiful for students!  
