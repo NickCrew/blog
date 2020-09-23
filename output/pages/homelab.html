@@ -1,0 +1,228 @@
+﻿<!DOCTYPE html>
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!-->
+<html lang="en">
+<!--<![endif]-->
+	<head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <meta name="author" content="Nick Ferguson">
+
+
+        <title>piggah.xyz- <p>My Home Lab</p></title>
+
+            <link href="https://piggah.xyz/blog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="piggah.xyz Full Atom Feed" />
+            <link href="https://piggah.xyz/blog/feeds/all.rss.xml" type="application/rss+xml" rel="alternate" title="piggah.xyz Full RSS Feed" />
+
+        <!-- CSS -->
+        <link rel="stylesheet" href="../theme/css/style.css">
+
+        <!-- Custom CSS -->
+        	<link rel="stylesheet" href="../theme/css/colors/blue.css" id="colors">
+
+        <!-- Code highlight color scheme -->
+            <link href="../theme/css/code_blocks/darkly.css" rel="stylesheet">
+
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+        <![endif]-->
+
+                <meta property="og:locale" content="">
+		<meta property="og:site_name" content="piggah.xyz">
+	</head>
+	<body>
+		<header id="header">
+			<!-- Container -->
+			<div class="container">
+				<!-- Logo / Mobile Menu -->
+				<div class="five columns">
+					<div id="textlogo">
+						<h1><a href="../">piggah.xyz</a></h1>
+					</div>
+				</div>
+						<!-- Navigation
+				================================================== -->
+				<div class="eleven columns">
+
+					<nav id="navigation" class="menu">
+						<ul id="responsive">
+
+							<li><a href="../">Home</a></li>
+
+							    <li><a href="blog">Archives</a></li>
+
+						</ul>
+					</nav>
+				</div>
+			</div>
+			<!-- Container / End -->
+		</header>
+		<!-- Header / End -->
+
+		<!-- Breadcrumbs Container-->
+		<div id="content-wrapper">
+			<section id="titlebar">
+				<!-- Container -->
+				<div class="container">
+				<div class="thirteen columns">
+					<nav id="breadcrumbs">
+						<ul>
+							<li>You are here:</li>
+							<li><a href="../">Home</a></li>
+						</ul>
+					</nav>
+				</div>
+				</div>
+				<!-- Container / End -->
+			</section>
+
+			<div class="container">
+	<div class="sixteen columns">
+	<h3 class="headline">
+		<p>My Home Lab</p>	</h3>
+	<span class="line" style="margin-bottom:35px;"></span>
+	<div class="clearfix"></div>
+	<hr>
+<p>I love having some enterprise-grade gear in my home to try new software and work on projects with the goal of providing business value to my employers and advancing my career through an always-improving, current skillset. Also it's great fun for me and I really enjoy the challenge and satisfaction of new problems to solve every day. Without further ado, the details of my lab:     </p>
+<h1>Hardware Resources</h1>
+<hr>
+<p>
+
+<h2>Main Hypervisor: Lenovo S30 Chassis (Sandy Bridge)</h2>
+<ul>
+<li><strong>CPU:</strong> Xeon E5-2630L  <em>2GHz 6core/12thread</em></li>
+<li><strong>RAM:</strong> 80GB DDR3 ECC</li>
+<li><strong>Flash Storage:</strong> 600GB</li>
+<li><strong>HDD Storage:</strong> 500GB Mirrored LVM</li>
+<li><strong>Video:</strong> Radeon HD 8350</li>
+<li><strong>Network:</strong> 5x Intel 1Gbps NICs  </li>
+<li><strong>OS:</strong> Red Hat Enterprise Linux 7.5   </li>
+<li><strong>Virtualization Stack:</strong> qemu-kvm-rhev, libvirt, OpenVSwitch</li>
+</ul>
+<p>This is a Sandy Bridge model S30, supporting up to a single Xeon E5-2690 processor and 128-256GB RAM depending on the type of memory used. (The Lenovo D30 is the dual-cpu variant.) Thanks to full Vt-d support, I am able to run nested hypervisors within this host. The socket 2011 boards and chips, starting with Sandy Bridge and Ivy Bridge, are a great balance between cost, power consumption and performance for use at home. Socket 1366 is getting a bit old for someone without ample space, cooling and electricity.   </p>
+<h3>Secondary/Testing Hypervisor:</h3>
+<p>Dell Inspiron (slim) w/ Intel i5-2405S (4c/4t), 8GB DDR3, 120GB Flash Storage, 2 Gigabit NICs</p>
+<hr>
+<h2><strong>Network Storage:</strong></h2>
+<p><em>QNAP TS-128A</em> ...... <strong>Capacity:</strong> 2TB w/ 1TB external backup<br>
+<br>
+Primarily a file and backup server (NFS and Samba), also provides: NTP (time syncronization), TFTP (PXE Boot), AFP (Apple Time Machine Backup), HTTP and FTP repositories and web pages, DLNA (Media Streaming)     </p>
+<p><strong>Future Plans:</strong> A custom, low-power CentOS box with ZFS backed storage.  </p>
+<h2><strong>Routing:</strong></h2>
+<p><em>Ubiquity Edgerouter-X</em> <br>
+<br>
+The Edgemax line from Ubiquity uses an OS based off of Vyatta (VyOS). It provides a nice web ui with additional functionality available through the command line interface. The ER-X is small with an unbeatable price of $50. It supports hardware offloading for deep packet inspection, bridged interfaces, VLANs and IPsec. Inter-vlan speeds are 1Gbps (total for both directions It supports hardware offloading for deep packet inspection, bridged interfaces, VLANs and IPsec. Inter-vlan speeds are 1Gbps (total for both directions). This works for me since so much of my traffic stays within my hypervisor.<br>
+<br>
+<strong>Future Plans:</strong> Virtualized or small-footprint device running VyOS, a Linux firewall and routing operating system. I have an increasing interest in software-defined networking and see a future where all of my networking infrastructure is virualized once I can guarantee a bit more redundancy.</p>
+<h2><strong>Switching:</strong></h2>
+<p><em>ZyXEL GS-1900-24E</em> .......  (24-Port Layer 2)<br>
+<br>
+This device has been fairly reliable, with one instance of an erased configuration after a hard reboot. Unfortunately, you cannot download a current-state config file for recovery purposes. It is also webUI-only. That said, it was reasonably priced and supports VLANs and LACP, the two most important things to me.<br>
+<br>
+<strong>Future Plans:</strong> A virtualized or small-footprint device running OpenVSwitch. Could likely be ran on the same machine as the VyOS instance. OpenVSwitch is very powerful switching software that many enterprise-grade whitebox solutions are built with. I find that I learn a great deal more about networking when configuring a switch using these tools.</p>
+<h3><strong>WiFi AP:</strong></h3>
+<p><em>ASUS RT-68u</em><br>
+<br>
+I bought this router to replace my ISP provided modem/router when I first started dreaming of expanded capabilities in my home. It will run DD-WRT if you want more advanced functionality and does support static routes only through the stock firmware (which is what I use). After upgrading my network to be VLAN-capable, the RT-68u was switched into Access Point Mode, in which it performs admirably. I typically see AC speeds of 6-700Mbps on my local network. No plans to replace it. If I need to cover more area in the future I will most likely switch to Ubiquity APs.   </p>
+<h3><strong>Workstation:</strong></h3>
+<p><em>2017 MacBook Pro nTB 13"</em> ...... 16GB RAM, dual-core intel i5<br>
+<br>
+First, I never thought I could use a laptop smaller than 15" and this machine has totally converted me to the 13" life. The primary reason I chose a MBP rather than, say, a Dell XPS or Lenovo Carbon, is the hugely important factor of a Unix-based operating system and the software available for the platform. Had I chosen any other manufacturer, I would be running desktop Linux (KDE Plasma is my preferred environment) and in doing so be required to virtualize Windows to run certain applications required for my college classes. macOS let's me run any desktop application I might need without giving up my Unix OS. The most important macOS app for me is iTerm2. Homebrew gives me access to any Linux programs I have need of.</p>
+<h3><strong>3x Raspberry Pis:</strong></h3>
+<ul>
+<li><strong>Pihole:</strong> a very effective, customizable, network-wide adblocker using DNS blacklists. It runs dnsmasq, so you can optionally use it as a DHCP server. Provides nice graphs and statistics for ads blocked on your network.</li>
+<li><strong>OpenVPN Server:</strong> I run my VPN server on one of the Pis currently. A project called PiVPN is available that allows an easy-install similar to pihole for those interested in a quick set-up. My VPN server is hugely important to me. First, it allows me secure access to my network while I'm away from home and also allows me to securely use public internet. I may move it to a dedicated VM for better performance. Tip: Run your VPN server on a port like 443 incase the foreign networks you connect to block 1194.  </li>
+<li><strong>Pi #3:</strong> Currently without a job, just used for various testing scenarios. Perhaps I will move into the public-hosted VLAN or host my documentation on it.
+<br></li>
+</ul>
+<h2>Diagrams</h2>
+<h3>Physical and Virtual Networks</h3>
+<p><img alt="Network Diagram" src="/img/network.png"><br>
+<a href="/img/network.png">View Larger</a><br>
+<p><br>
+<p></p>
+<h3>Core Servers Organization, DNS Zones and Physical Layout</h3>
+<p><img alt="Core Services &amp; Zones Overview" src="/img/services.png">
+<a href="/img/services.png">View Larger</a></p>
+<h4>Core Services Summary</h4>
+<hr>
+<ul>
+<li>
+<p><strong>OpenVSwitch:</strong><br>
+Software-Defined Networking powerhouse, allows for complex
+virtual networking setups. I have replaced Linux bridges with OVS and increased network functionality with the change. One benefit of using OVS is hosts on the same subnet do not 'leave' the OVS network, allowing fast communication at virtio speeds (up to 15Gbps).</p>
+</li>
+<li>
+<p><strong>The Foreman, Katello and Puppet:</strong><br>
+Unattended installs, provisioning and life cycle management. This was a major project to get operational but it was well worth it. All of the standard processes involved in creating new machines is automated and it's an absolute joy once you get it going. <a href="/posts/a-vm-is-born/">Read more about my use of The Foreman here.</a></p>
+</li>
+<li>
+<p><strong>LibreNMS:</strong><br>
+SNMP-based monitoring solution, collects a huge amount of data if desired and sends alerts to my phone. Allows me to discover historical patterns in all of my machines, including VMs. I plan to feed LibreNMS data into InfluxDB in order to generate some Grafana dashboards in the near-future. I also use <strong>Netdata</strong> for real-time monitoring. It's very easy to set-up and I would recommend it for beginners looking to get a view into their system health.</p>
+</li>
+<li>
+<p><strong>Graylog:</strong><br>
+Centralized log aggregation, extraction and dashboard display. Graylog has the benefit of being easy to deploy. I use a combination of Rsyslog and the Graylog Sidecar Collector to collect more specific logs. In the future I will revisit the ELK stack and Splunk.  </p>
+</li>
+<li>
+<p><strong>FreeIPA:</strong><br>
+FreeIPA is also known as by Red Hat as Identity Management, but it does much more than that and has become a critical part of my lab. I have two FreeIPA replicas (critical means redundancy!) that handle DNS, Single Sign-On, Automounting, Kerberos and authentication for my lab. It adds a ton of convenience and I also am enjoying learning about all of its components.</p>
+</li>
+<li>
+<p><strong>Rancher:</strong><br>
+Rancher is my container orchestration tool I'm currently using. Very powerful and easy to use Web UI. It will manage many services across many hosts and enable you to create high-availability applications.</p>
+</li>
+<li>
+<p><strong>LXD:</strong><br>
+I love LXD containers. Most of my VMs are Red Hat but I always have a couple Ubuntu VMs to act as LXD hosts. LXD Containers behave much closer to full-fledged VMs in practice compared to Docker and are really great for both quick experimenting and long-term hosts. They require significantly less resources than a full VM while still providing most of the benefits. I have LXD containers based off several different OS images including Ubuntu, CentOS, Alpine and Fedora. You can create clusters, overlay networks across multiple physical machines, take snapshots and live migrate your LXD containers. LXD can use ZFS, Btrfs or regular directories to back the container file systems. Personally, I am using Btrfs and installing the host VM directly to LVM volumes. This allows for near native disk performance. Very cool technology I would recommend especially to beginners.</p>
+</li>
+<li>
+<p><strong>Plex:</strong><br>
+My central source for Movies, Music and TV Shows! My QNAP mentioned earlier stores all of my media and the Plex server mounts it as an NFS share. I primarily use Plex to watch movies and TV shows. My (extensive) music library is loaded into my Plex library but I typically choose to play my music through iTunes. Plex is free and offers a fantastic UI and organization. It will transcode virtually any format, though I try to avoid the need for on-the-fly transcode due to the CPU load. You can share your Plex library with friends and family as if you were your own mini-Netflix service.</p>
+</li>
+</ul>
+<p>And there you have it. The basics of my home lab, a place I spend a great deal of time and will hopefully be writing many more posts about in the future! I am currently a bit space and power-consumption constrained so most of my expansion from this point will be into AWS resources, which I will document all the same. I eagerly await the day I can install a 24U+ server rack at home, but for now the Lenovo is serving admirably, I plan smartly to maximize resources and AWS credits are plentiful for students!  </p>
+	</div>
+			</div>
+			<!-- Container / End -->
+		</div>
+		<!-- Content Wrapper / End -->
+
+		<div id="footer-bottom">
+			<!-- Container -->
+			<div class="container">
+				<div class="eight columns">&copy; Copyright 2020 Nick Ferguson || Blog powered by <a href="http://getpelican.com">Pelican</a></div>
+					<div class="eight columns">
+						<ul class="social-icons-footer">
+								<li>
+									<a href="https://github.com/NickCrew" class="tooltip top" title="Github">
+										<i class="icon-github"></i>
+									</a>
+								</li>
+								<li>
+									<a href="https://www.youtube.com/channel/UC972wwbPrKXW-YlXCPGPbQw" class="tooltip top" title="YouTube">
+										<i class="icon-youtube"></i>
+									</a>
+								</li>
+								<li>
+									<a href="https://twitter.com/piggahmonster" class="tooltip top" title="Twitter">
+										<i class="icon-twitter"></i>
+									</a>
+								</li>
+							<li><a href="../blog/feeds/all.atom.xml" class="tooltip top" title="RSS"><i class="icon-rss"></i></a></li>
+						</ul>
+					</div>
+			</div>
+			<!-- Container / End -->
+		</div>
+		<!-- Footer Bottom / End -->
+
+	<!-- Javascripts -->
+	<script src="../theme/js/jquery.min.js"></script>
+	</body>
+</html>

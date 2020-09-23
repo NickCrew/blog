@@ -1,0 +1,230 @@
+﻿<!DOCTYPE html>
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!-->
+<html lang="en">
+<!--<![endif]-->
+	<head>
+            <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <meta name="author" content="Nick Ferguson">
+
+
+        <title>piggah.xyz - <p>Life and Deaath of a Virtual Machine</p></title>
+
+            <link href="https://piggah.xyz/blog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="piggah.xyz Full Atom Feed" />
+            <link href="https://piggah.xyz/blog/feeds/all.rss.xml" type="application/rss+xml" rel="alternate" title="piggah.xyz Full RSS Feed" />
+
+        <!-- CSS -->
+        <link rel="stylesheet" href="../../theme/css/style.css">
+
+        <!-- Custom CSS -->
+        	<link rel="stylesheet" href="../../theme/css/colors/blue.css" id="colors">
+
+        <!-- Code highlight color scheme -->
+            <link href="../../theme/css/code_blocks/darkly.css" rel="stylesheet">
+
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+        <![endif]-->
+
+
+
+
+        <meta name="tags" contents="lab" />
+        <meta name="tags" contents="virtualization" />
+        <meta name="tags" contents="applications" />
+
+	                <meta property="og:locale" content="">
+		<meta property="og:site_name" content="piggah.xyz">
+
+	<meta property="og:type" content="article">
+	<meta property="article:author" content="">
+	<meta property="og:url" content="../../blog/life-and-deaath-of-a-virtual-machine/">
+	<meta property="og:title" content="<p>Life and Deaath of a Virtual Machine</p>">
+	<meta property="og:description" content="">
+	   <meta property="og:image" content="../../images/guilherme-toti.jpg">
+	<meta property="article:published_time" content="2018-07-06 00:00:00-04:00">
+	</head>
+	<body>
+		<header id="header">
+			<!-- Container -->
+			<div class="container">
+				<!-- Logo / Mobile Menu -->
+				<div class="five columns">
+					<div id="textlogo">
+						<h1><a href="../../">piggah.xyz</a></h1>
+					</div>
+				</div>
+						<!-- Navigation
+				================================================== -->
+				<div class="eleven columns">
+
+					<nav id="navigation" class="menu">
+						<ul id="responsive">
+
+							<li><a href="../../">Home</a></li>
+
+							    <li><a href="blog">Archives</a></li>
+
+						</ul>
+					</nav>
+				</div>
+			</div>
+			<!-- Container / End -->
+		</header>
+		<!-- Header / End -->
+
+		<!-- Breadcrumbs Container-->
+		<div id="content-wrapper">
+			<section id="titlebar">
+				<!-- Container -->
+				<div class="container">
+				<div class="thirteen columns">
+					<nav id="breadcrumbs">
+						<ul>
+							<li>You are here:</li>
+							<li><a href="../../">Home</a></li>
+<li><a href="../../category/articles.html">Articles</a></li>
+<li><p>Life and Deaath of a Virtual Machine</p></li>
+						</ul>
+					</nav>
+				</div>
+				</div>
+				<!-- Container / End -->
+			</section>
+
+			<div class="container">
+	<div class="twelve alt columns">
+<article class="post" style="margin: 0; border: 0;">
+
+	<div class="post-format">
+		<div class="circle"><i class="icon-pencil"></i><span></span></div>
+	</div>
+
+	<section class="post-content">
+
+		<header class="meta">
+			<h2><a href="../../blog/life-and-deaath-of-a-virtual-machine/"><p>Life and Deaath of a Virtual Machine</p></a></h2>
+			<ul>
+				<li>By <a href="../../author/nick-ferguson.html">Nick Ferguson</a></li>
+				<li>Fri 06 July 2018</li>
+			</ul>
+		</header>
+
+		<hr>
+<h1>Synopsis</h1>
+<p><strong>Disscuss the key components to the automated virtual infrastructure of my lab environment.</strong>  </p>
+<hr>
+<h2>Introduction</h2>
+<p>I'm going to do a quick write-up on my host provisioning workflow now that all the pieces are in place and (mostly) functioning as intended. In any large production environment it will be a necessity to have automated processes to handle: Host creation, Life-cycle mangement and patching, provisioning and possibly identity management depending on the environment. We are not yet going to cover things such as logging and monitoring, just the things happening at the birth" of the machine. </p>
+<hr>
+<h2>Foreman</h2>
+<p>Foreman lets you define anything you'd normally be able to define with good old virt-install. Resources, storage location, disk type, network interfaces, operating system, the works. You are able to create <em>Host Groups</em> that act as templates so you don't have to fill out 20 drop-down menus everytime you want a host. Red Hat distributions are able to make use of <em>kickstart</em> files and Debian distros use a <em>preseed</em> file. These are used during regular unattended installs and essentially contain all the answers to the questions an OS installer would ask you. You are able to edit and store many variations within Foreman and associate them with operating systems. So you select the template you want to base your guest on and then... </p>
+<p>Foreman is able to run a TFTP server and act as the PXE boot server for your network. When you use PXE, you must configure your DHCP server to tell machines where the TFTP server is located. In my case I had to enter a command in the terminal of my Edgerouter-X. At this point the kernel image is fetched, booted and the kickstart or preseed unattended install commences. You can watch as the installer goes through answering the prompts on your behalf and it is quite rewarding! In my case, Foreman is accessing the Libvirt system the same way you as a user would to define and manage the VMs. Foreman supports many other hypervisors, including ESXi, as well.</p>
+<p>In addition to the regular installer options, the kickstart files can pull in <em>snippets</em> to instruct the performing of other actions. After the system and packages are installed these commands will be called. Foreman is able to integrate with a FreeIPA server and take advantage of the unattended ipa-client-install command to join your guest to the specified realm. In my case my FreeIPA servers also provide DNS to the network, as well as configure automounting of user home folders and NFS shares. This is quite convenient because as soon as a guest reports that the installation is complete, you can ssh into your IPA user at the machines freshly updated DNS record hostname with all of your files waiting for you. </p>
+<hr>
+<h2>Puppet</h2>
+<p>At this point Puppet will begin running any classes assigned to the host through it's host group or individually. Some modules I run on all guests are the configuration of the snmp daemon so that Librenms may discover it and add it to monitoring, the rsyslog daemon so that it may begin sending logs to Graylog, NTP so that it may synchronize its time with the other servers and ssh key injection.  </p>
+<hr>
+<h2>Katello</h2>
+<p>Katello is a Foreman plugin that allows you to manage <em>Content</em>. You can sync repositories, either on-demand or download the entire repo. During kickstart the guest will activate its <em>subscription</em> based on the assigned <em>Life-Cycle Environment</em>. The life-cycle environment just says what packages and updates a given guest or group of guests should receive. The <em>katello-agent</em> is installed on the VMs to allow reporting back to Foreman. Katello will manage their updates for you and inform you of any problems. The guests are in regular communication with the Foreman server to check and see if they need packages and initiating puppet runs to apply any changes made through the Puppet Classes. This takes a huge chunk of manual maintenance off your plate. </p>
+<hr>
+<h2>Conclusion</h2>
+<p>And so the VM is born! Puppet or another configuration management tool will go on to apply configurations needed for it's specific role. If it is a web server, nginx will be set up. If it's a database server then PostgreSQL may be installed and configured at this point. You are able to continously manage your guests through Foreman and it's partner apps throughout it's life until finally it is destroyed. </p>
+<p>It is a lot of work in the beginning setting up such an environment and it does occasionally require some sweet-talking, but for the most part it does a very good job of automating some of the most repetitive aspects of using a virtual environment. Foreman comes with a great dashboard that lets you get an overview of the state of your environment. You can see if any hosts have had failed puppet runs, what configurations have been applied recently and to whom, if they're out of sync with the package repositories or if they're not powered on at all. If you need to dig deeper, extensively detailed reports are available for each host. </p>
+		    <div class="tags">
+		        <p>tags: <a href="../../tag/lab.html">lab</a><a href="../../tag/virtualization.html">virtualization</a><a href="../../tag/applications.html">applications</a></p>
+		    </div>
+
+<div class="sharing">
+</div>
+<hr>
+
+	</section>
+	<div class="clearfix"></div>
+
+</article>
+
+	</div>
+
+	<!-- Sidebar -->
+	<div class="four columns">
+		<!-- About  -->
+		<div class="widget no-mg-top">
+			<h3 class="headline">About</h3><span class="line"></span><div class="clearfix"></div>
+			<p>Build and Release Platform Developer located in Clearwater, FL. Special focus on Linux & Containerized Apps, .NET Core, PowerShell, Build & Automation.</p>
+		</div>
+
+		<!-- Categories -->
+		<div class="widget">
+			<h3 class="headline">Categories</h3><span class="line"></span><div class="clearfix"></div>
+			<nav class="categories">
+				<ul>
+					    <li class="active"><a href="../../category/articles.html">Articles</a></li>
+					    <li><a href="../../category/tutorials.html">Tutorials</a></li>
+				</ul>
+			</nav>
+		</div>
+		
+		<!-- Tags -->
+		<div class="widget">
+			<h3 class="headline">Tags</h3><span class="line"></span><div class="clearfix"></div>
+			<nav class="tags">				    <a href="../../tag/applications.html">applications</a>
+				    <a href="../../tag/dns.html">dns</a>
+				    <a href="../../tag/freeipa.html">freeipa</a>
+				    <a href="../../tag/identity.html">identity</a>
+				    <a href="../../tag/kvm.html">kvm</a>
+				    <a href="../../tag/lab.html">lab</a>
+				    <a href="../../tag/libvirt.html">libvirt</a>
+				    <a href="../../tag/networking.html">networking</a>
+				    <a href="../../tag/openvswitch.html">OpenVSwitch</a>
+				    <a href="../../tag/platforms.html">platforms</a>
+				    <a href="../../tag/python.html">python</a>
+				    <a href="../../tag/snippets.html">snippets</a>
+				    <a href="../../tag/virtualization.html">virtualization</a>
+			</nav>
+		</div>
+	</div>
+			</div>
+			<!-- Container / End -->
+		</div>
+		<!-- Content Wrapper / End -->
+
+		<div id="footer-bottom">
+			<!-- Container -->
+			<div class="container">
+				<div class="eight columns">&copy; Copyright 2020 Nick Ferguson || Blog powered by <a href="http://getpelican.com">Pelican</a></div>
+					<div class="eight columns">
+						<ul class="social-icons-footer">
+								<li>
+									<a href="https://github.com/NickCrew" class="tooltip top" title="Github">
+										<i class="icon-github"></i>
+									</a>
+								</li>
+								<li>
+									<a href="https://www.youtube.com/channel/UC972wwbPrKXW-YlXCPGPbQw" class="tooltip top" title="YouTube">
+										<i class="icon-youtube"></i>
+									</a>
+								</li>
+								<li>
+									<a href="https://twitter.com/piggahmonster" class="tooltip top" title="Twitter">
+										<i class="icon-twitter"></i>
+									</a>
+								</li>
+							<li><a href="../../blog/feeds/all.atom.xml" class="tooltip top" title="RSS"><i class="icon-rss"></i></a></li>
+						</ul>
+					</div>
+			</div>
+			<!-- Container / End -->
+		</div>
+		<!-- Footer Bottom / End -->
+
+	<!-- Javascripts -->
+	<script src="../../theme/js/jquery.min.js"></script>
+	</body>
+</html>

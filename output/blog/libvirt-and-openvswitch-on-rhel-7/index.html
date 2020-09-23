@@ -1,0 +1,348 @@
+﻿<!DOCTYPE html>
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!-->
+<html lang="en">
+<!--<![endif]-->
+	<head>
+            <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <meta name="author" content="Nick Ferguson">
+
+
+        <title>piggah.xyz - <p>Libvirt and OpenVSwitch on RHEL 7</p></title>
+
+            <link href="https://piggah.xyz/blog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="piggah.xyz Full Atom Feed" />
+            <link href="https://piggah.xyz/blog/feeds/all.rss.xml" type="application/rss+xml" rel="alternate" title="piggah.xyz Full RSS Feed" />
+
+        <!-- CSS -->
+        <link rel="stylesheet" href="../../theme/css/style.css">
+
+        <!-- Custom CSS -->
+        	<link rel="stylesheet" href="../../theme/css/colors/blue.css" id="colors">
+
+        <!-- Code highlight color scheme -->
+            <link href="../../theme/css/code_blocks/darkly.css" rel="stylesheet">
+
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+        <![endif]-->
+
+
+
+
+        <meta name="tags" contents="OpenVSwitch" />
+        <meta name="tags" contents="virtualization" />
+        <meta name="tags" contents="kvm" />
+        <meta name="tags" contents="libvirt" />
+        <meta name="tags" contents="networking" />
+
+	                <meta property="og:locale" content="">
+		<meta property="og:site_name" content="piggah.xyz">
+
+	<meta property="og:type" content="article">
+	<meta property="article:author" content="">
+	<meta property="og:url" content="../../blog/libvirt-and-openvswitch-on-rhel-7/">
+	<meta property="og:title" content="<p>Libvirt and OpenVSwitch on RHEL 7</p>">
+	<meta property="og:description" content="">
+	   <meta property="og:image" content="../../images/guilherme-toti.jpg">
+	<meta property="article:published_time" content="2018-07-22 00:00:00-04:00">
+	</head>
+	<body>
+		<header id="header">
+			<!-- Container -->
+			<div class="container">
+				<!-- Logo / Mobile Menu -->
+				<div class="five columns">
+					<div id="textlogo">
+						<h1><a href="../../">piggah.xyz</a></h1>
+					</div>
+				</div>
+						<!-- Navigation
+				================================================== -->
+				<div class="eleven columns">
+
+					<nav id="navigation" class="menu">
+						<ul id="responsive">
+
+							<li><a href="../../">Home</a></li>
+
+							    <li><a href="blog">Archives</a></li>
+
+						</ul>
+					</nav>
+				</div>
+			</div>
+			<!-- Container / End -->
+		</header>
+		<!-- Header / End -->
+
+		<!-- Breadcrumbs Container-->
+		<div id="content-wrapper">
+			<section id="titlebar">
+				<!-- Container -->
+				<div class="container">
+				<div class="thirteen columns">
+					<nav id="breadcrumbs">
+						<ul>
+							<li>You are here:</li>
+							<li><a href="../../">Home</a></li>
+<li><a href="../../category/tutorials.html">Tutorials</a></li>
+<li><p>Libvirt and OpenVSwitch on RHEL 7</p></li>
+						</ul>
+					</nav>
+				</div>
+				</div>
+				<!-- Container / End -->
+			</section>
+
+			<div class="container">
+	<div class="twelve alt columns">
+<article class="post" style="margin: 0; border: 0;">
+
+	<div class="post-format">
+		<div class="circle"><i class="icon-pencil"></i><span></span></div>
+	</div>
+
+	<section class="post-content">
+
+		<header class="meta">
+			<h2><a href="../../blog/libvirt-and-openvswitch-on-rhel-7/"><p>Libvirt and OpenVSwitch on RHEL 7</p></a></h2>
+			<ul>
+				<li>By <a href="../../author/nick-ferguson.html">Nick Ferguson</a></li>
+				<li>Sun 22 July 2018</li>
+			</ul>
+		</header>
+
+		<hr>
+<h1>Synopsis</h1>
+<p><strong><em>Learn how to leverage OpenVSwitch to create a Libvirt network with portgroups for each of our VLANs.</em></strong></p>
+<hr>
+<h3>Prequisites</h3>
+<ol>
+<li>
+<p>We will assume that you have installed OVS and Libvirt </p>
+</li>
+<li>
+<p>If you desire VLAN support, you have a network interface connected to a trunk    </p>
+</li>
+<li>
+<p>If you are using Ubuntu or Debian this will still work, but you will have to configure the <code>/etc/network/interfaces</code> file or netplan rather than the network-scripts used here. </p>
+</li>
+</ol>
+<h3>Creating and Configuring the OVS Bridge</h3>
+<hr>
+<h4>Create the OVS bridge</h4>
+<div class="highlight"><pre><span></span>ovs-vsctl add-br ovsbr0
+</pre></div>
+
+
+<h4>Add the interface (<em>eno1</em> in this case) connected to the trunk</h4>
+<div class="highlight"><pre><span></span>ovs-vsctl add-port ovsbr0 eno1
+</pre></div>
+
+
+<h4>Check the configuration</h4>
+<div class="highlight"><pre><span></span>ovs-vsctl show
+Bridge <span class="s2">&quot;ovsbr0&quot;</span>
+    Port <span class="s2">&quot;eno1&quot;</span>
+        Interface <span class="s2">&quot;eno1&quot;</span>
+    Port <span class="s2">&quot;ovsbr0&quot;</span>
+        Interface <span class="s2">&quot;ovsbr0&quot;</span>
+            type: internal
+</pre></div>
+
+
+<hr>
+<blockquote>
+<p><strong>NOTE:</strong> It is not necessary to set the <code>tag</code> or <code>trunk</code> parameters on the
+OVS Port or Bridge for this particular scenario to work</p>
+</blockquote>
+<h4>Assign an IP to the OVS Bridge:</h4>
+<h5>Remove the IP from the physical NIC</h5>
+<div class="highlight"><pre><span></span>ip addr del <span class="m">0</span>.0.0.0 dev eno1
+</pre></div>
+
+
+<h5>Run dhclient on the OVS bridge</h5>
+<div class="highlight"><pre><span></span>ip link <span class="nb">set</span> up ovsbr0
+dhclient ovsbr0
+</pre></div>
+
+
+<p><strong><em>Note: At this point it is ready but it will not persist across reboots without creating and modifying the network scripts</em></strong>  </p>
+<h3>Configuring the network-scripts</h3>
+<div class="highlight"><pre><span></span><span class="c1"># /etc/sysconfig/network-scripts/ifcfg-eno1</span>
+<span class="nv">TYPE</span><span class="o">=</span><span class="s2">&quot;OVSPort&quot;</span>
+<span class="nv">OVS_BRIDGE</span><span class="o">=</span><span class="s2">&quot;ovsbr0&quot;</span>
+<span class="nv">PROXY_METHOD</span><span class="o">=</span><span class="s2">&quot;none&quot;</span>
+<span class="nv">BROWSER_ONLY</span><span class="o">=</span><span class="s2">&quot;no&quot;</span>
+<span class="nv">BOOTPROTO</span><span class="o">=</span><span class="s2">&quot;none&quot;</span>
+<span class="nv">DEFROUTE</span><span class="o">=</span><span class="s2">&quot;yes&quot;</span>
+<span class="nv">IPV4_FAILURE_FATAL</span><span class="o">=</span><span class="s2">&quot;no&quot;</span>
+<span class="nv">NAME</span><span class="o">=</span><span class="s2">&quot;eno1&quot;</span>
+<span class="nv">DEVICE</span><span class="o">=</span><span class="s2">&quot;eno1&quot;</span>
+<span class="nv">ONBOOT</span><span class="o">=</span><span class="s2">&quot;yes&quot;</span>
+</pre></div>
+
+
+<h4>For DHCP</h4>
+<div class="highlight"><pre><span></span><span class="c1"># /etc/sysconfig/network-scripts/ifcfg-ovsbr0</span>
+<span class="nv">BOOTPROTO</span><span class="o">=</span><span class="s2">&quot;dhcp&quot;</span>
+<span class="nv">DEVICE</span><span class="o">=</span><span class="s2">&quot;ovsbr0&quot;</span>
+<span class="nv">DEVICETYPE</span><span class="o">=</span><span class="s2">&quot;ovs&quot;</span>
+<span class="nv">HOTPLUG</span><span class="o">=</span><span class="s2">&quot;no&quot;</span>
+<span class="nv">NM_CONTROLLED</span><span class="o">=</span><span class="s2">&quot;no&quot;</span>
+<span class="nv">ONBOOT</span><span class="o">=</span><span class="s2">&quot;yes&quot;</span>
+<span class="nv">TYPE</span><span class="o">=</span><span class="s2">&quot;OVSBridge&quot;</span>
+</pre></div>
+
+
+<blockquote>
+<p><strong>Note:</strong> You do not have to disable <em>NetworkManager</em>, however we do not want NetworkManager controlling any of the interfaces involved in our OVS set-up, including the physical NIC and any virtual ports.  </p>
+</blockquote>
+<p><strong><em>Reboot the system or restart networking to confirm everything is working correctly.</em></strong>  </p>
+<hr>
+<h2>Define the Libvirt Network</h2>
+<p>Here we are assuming two (2) VLANs with IDs <strong>50</strong> and <strong>60</strong>, plus a virtual trunk: <strong>vlan-all</strong>.  </p>
+<p>Each VLAN will be a Libvirt network <em>portgroup</em> that you may select using any of the Libvirt-client tools.  </p>
+<h3>Create an XML file</h3>
+<div class="highlight"><pre><span></span><span class="c">&lt;!-- /tmp/ovs-network.xml --&gt;</span>
+<span class="nt">&lt;network&gt;</span>
+  <span class="nt">&lt;name&gt;</span>ovs-network<span class="nt">&lt;/name&gt;</span>
+  <span class="nt">&lt;forward</span> <span class="na">mode=</span><span class="s">&#39;bridge&#39;</span><span class="nt">/&gt;</span>
+  <span class="nt">&lt;bridge</span> <span class="na">name=</span><span class="s">&#39;ovsbr0&#39;</span><span class="nt">/&gt;</span>
+  <span class="nt">&lt;virtualport</span> <span class="na">type=</span><span class="s">&#39;openvswitch&#39;</span><span class="nt">/&gt;</span>
+  <span class="nt">&lt;portgroup</span> <span class="na">name=</span><span class="s">&#39;vlan-01&#39;</span> <span class="na">default=</span><span class="s">&#39;yes&#39;</span><span class="nt">&gt;</span>
+  <span class="nt">&lt;/portgroup&gt;</span>
+  <span class="nt">&lt;portgroup</span> <span class="na">name=</span><span class="s">&#39;vlan-50&#39;</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;vlan&gt;</span>
+      <span class="nt">&lt;tag</span> <span class="na">id=</span><span class="s">&#39;50&#39;</span><span class="nt">/&gt;</span>
+    <span class="nt">&lt;/vlan&gt;</span>
+  <span class="nt">&lt;/portgroup&gt;</span>
+  <span class="nt">&lt;portgroup</span> <span class="na">name=</span><span class="s">&#39;vlan-all&#39;</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;vlan</span> <span class="na">trunk=</span><span class="s">&#39;yes&#39;</span><span class="nt">&gt;</span>
+      <span class="nt">&lt;tag</span> <span class="na">id=</span><span class="s">&#39;50&#39;</span><span class="nt">/&gt;</span>
+      <span class="nt">&lt;tag</span> <span class="na">id=</span><span class="s">&#39;60&#39;</span><span class="nt">/&gt;</span>
+    <span class="nt">&lt;/vlan&gt;</span>
+  <span class="nt">&lt;/portgroup&gt;</span>
+<span class="nt">&lt;/network&gt;</span>
+</pre></div>
+
+
+<h3>Define the network</h3>
+<div class="highlight"><pre><span></span>virsh net-define /tmp/ovs-network.xml
+</pre></div>
+
+
+<h4>Start the network</h4>
+<div class="highlight"><pre><span></span>virsh net-start ovs-network
+</pre></div>
+
+
+<h4>Have the network start on boot</h4>
+<div class="highlight"><pre><span></span><span class="err">virsh net-autostart ovs-network</span>
+</pre></div>
+
+
+<p>Now when you start a guest they will be on the subnet of the portgroup you select.<br>
+If you select <strong>vlan-all</strong> then that is a trunk interface (like the one coming into your physical NIC).  </p>
+<hr>
+<p>This is far from the only way to use OVS with KVM/Libvirt guests but
+I believe it by the simplest and easiest. One beneift of using OVS
+is that guests on the same hypervisor, on the same subnet will communicate at virtio speed because they do not have to go back out over copper.</p>
+		    <div class="tags">
+		        <p>tags: <a href="../../tag/openvswitch.html">OpenVSwitch</a><a href="../../tag/virtualization.html">virtualization</a><a href="../../tag/kvm.html">kvm</a><a href="../../tag/libvirt.html">libvirt</a><a href="../../tag/networking.html">networking</a></p>
+		    </div>
+
+<div class="sharing">
+</div>
+<hr>
+
+	</section>
+	<div class="clearfix"></div>
+
+</article>
+
+	</div>
+
+	<!-- Sidebar -->
+	<div class="four columns">
+		<!-- About  -->
+		<div class="widget no-mg-top">
+			<h3 class="headline">About</h3><span class="line"></span><div class="clearfix"></div>
+			<p>Build and Release Platform Developer located in Clearwater, FL. Special focus on Linux & Containerized Apps, .NET Core, PowerShell, Build & Automation.</p>
+		</div>
+
+		<!-- Categories -->
+		<div class="widget">
+			<h3 class="headline">Categories</h3><span class="line"></span><div class="clearfix"></div>
+			<nav class="categories">
+				<ul>
+					    <li><a href="../../category/articles.html">Articles</a></li>
+					    <li class="active"><a href="../../category/tutorials.html">Tutorials</a></li>
+				</ul>
+			</nav>
+		</div>
+		
+		<!-- Tags -->
+		<div class="widget">
+			<h3 class="headline">Tags</h3><span class="line"></span><div class="clearfix"></div>
+			<nav class="tags">				    <a href="../../tag/applications.html">applications</a>
+				    <a href="../../tag/dns.html">dns</a>
+				    <a href="../../tag/freeipa.html">freeipa</a>
+				    <a href="../../tag/identity.html">identity</a>
+				    <a href="../../tag/kvm.html">kvm</a>
+				    <a href="../../tag/lab.html">lab</a>
+				    <a href="../../tag/libvirt.html">libvirt</a>
+				    <a href="../../tag/networking.html">networking</a>
+				    <a href="../../tag/openvswitch.html">OpenVSwitch</a>
+				    <a href="../../tag/platforms.html">platforms</a>
+				    <a href="../../tag/python.html">python</a>
+				    <a href="../../tag/snippets.html">snippets</a>
+				    <a href="../../tag/virtualization.html">virtualization</a>
+			</nav>
+		</div>
+	</div>
+			</div>
+			<!-- Container / End -->
+		</div>
+		<!-- Content Wrapper / End -->
+
+		<div id="footer-bottom">
+			<!-- Container -->
+			<div class="container">
+				<div class="eight columns">&copy; Copyright 2020 Nick Ferguson || Blog powered by <a href="http://getpelican.com">Pelican</a></div>
+					<div class="eight columns">
+						<ul class="social-icons-footer">
+								<li>
+									<a href="https://github.com/NickCrew" class="tooltip top" title="Github">
+										<i class="icon-github"></i>
+									</a>
+								</li>
+								<li>
+									<a href="https://www.youtube.com/channel/UC972wwbPrKXW-YlXCPGPbQw" class="tooltip top" title="YouTube">
+										<i class="icon-youtube"></i>
+									</a>
+								</li>
+								<li>
+									<a href="https://twitter.com/piggahmonster" class="tooltip top" title="Twitter">
+										<i class="icon-twitter"></i>
+									</a>
+								</li>
+							<li><a href="../../blog/feeds/all.atom.xml" class="tooltip top" title="RSS"><i class="icon-rss"></i></a></li>
+						</ul>
+					</div>
+			</div>
+			<!-- Container / End -->
+		</div>
+		<!-- Footer Bottom / End -->
+
+	<!-- Javascripts -->
+	<script src="../../theme/js/jquery.min.js"></script>
+	</body>
+</html>

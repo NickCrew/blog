@@ -1,0 +1,421 @@
+﻿<!DOCTYPE html>
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!-->
+<html lang="en">
+<!--<![endif]-->
+	<head>
+            <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <meta name="author" content="Nick Ferguson">
+
+
+        <title>piggah.xyz - <p>Live External VM Snapshots for Libvirt</p></title>
+
+            <link href="https://piggah.xyz/blog/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="piggah.xyz Full Atom Feed" />
+            <link href="https://piggah.xyz/blog/feeds/all.rss.xml" type="application/rss+xml" rel="alternate" title="piggah.xyz Full RSS Feed" />
+
+        <!-- CSS -->
+        <link rel="stylesheet" href="../../theme/css/style.css">
+
+        <!-- Custom CSS -->
+        	<link rel="stylesheet" href="../../theme/css/colors/blue.css" id="colors">
+
+        <!-- Code highlight color scheme -->
+            <link href="../../theme/css/code_blocks/darkly.css" rel="stylesheet">
+
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+        <![endif]-->
+
+
+
+
+        <meta name="tags" contents="virtualization" />
+        <meta name="tags" contents="libvirt" />
+        <meta name="tags" contents="kvm" />
+
+	                <meta property="og:locale" content="">
+		<meta property="og:site_name" content="piggah.xyz">
+
+	<meta property="og:type" content="article">
+	<meta property="article:author" content="">
+	<meta property="og:url" content="../../blog/live-external-vm-snapshots-for-libvirt/">
+	<meta property="og:title" content="<p>Live External VM Snapshots for Libvirt</p>">
+	<meta property="og:description" content="">
+	   <meta property="og:image" content="../../images/guilherme-toti.jpg">
+	<meta property="article:published_time" content="2018-08-08 00:00:00-04:00">
+	</head>
+	<body>
+		<header id="header">
+			<!-- Container -->
+			<div class="container">
+				<!-- Logo / Mobile Menu -->
+				<div class="five columns">
+					<div id="textlogo">
+						<h1><a href="../../">piggah.xyz</a></h1>
+					</div>
+				</div>
+						<!-- Navigation
+				================================================== -->
+				<div class="eleven columns">
+
+					<nav id="navigation" class="menu">
+						<ul id="responsive">
+
+							<li><a href="../../">Home</a></li>
+
+							    <li><a href="blog">Archives</a></li>
+
+						</ul>
+					</nav>
+				</div>
+			</div>
+			<!-- Container / End -->
+		</header>
+		<!-- Header / End -->
+
+		<!-- Breadcrumbs Container-->
+		<div id="content-wrapper">
+			<section id="titlebar">
+				<!-- Container -->
+				<div class="container">
+				<div class="thirteen columns">
+					<nav id="breadcrumbs">
+						<ul>
+							<li>You are here:</li>
+							<li><a href="../../">Home</a></li>
+<li><a href="../../category/tutorials.html">Tutorials</a></li>
+<li><p>Live External VM Snapshots for Libvirt</p></li>
+						</ul>
+					</nav>
+				</div>
+				</div>
+				<!-- Container / End -->
+			</section>
+
+			<div class="container">
+	<div class="twelve alt columns">
+<article class="post" style="margin: 0; border: 0;">
+
+	<div class="post-format">
+		<div class="circle"><i class="icon-pencil"></i><span></span></div>
+	</div>
+
+	<section class="post-content">
+
+		<header class="meta">
+			<h2><a href="../../blog/live-external-vm-snapshots-for-libvirt/"><p>Live External VM Snapshots for Libvirt</p></a></h2>
+			<ul>
+				<li>By <a href="../../author/nick-ferguson.html">Nick Ferguson</a></li>
+				<li>Wed 08 August 2018</li>
+			</ul>
+		</header>
+
+		<hr>
+<h1>Synopsis</h1>
+<p><strong><em>In this tutorial we are going to take an external snapshot of a running VM.</em></strong></p>
+<hr>
+<h2>External vs Internal Snapshots</h2>
+<p><em>QCOW2</em> disk images have the ability to store snapshots within the image itself. This can
+have its uses, but an external snapshot is faster and allows us to safely store a copy
+of the file system at that point. Red Hat also recommends external snapshots as the
+preferred snapshotting method.  </p>
+<h2>Live Block Commit</h2>
+<p>In simple terms, live block commit allows us to take a snapshot, operate a given period
+of time with that snapshot as the primary disk image, and then 'merge' the virtual disks
+with all changes since the snapshot saved.  </p>
+<p>This is useful to us because we are going to:<br>
+1. Take a snapshot<br>
+2. Copy the original disk image to our backup location<br>
+3. Use block commit to merge the snapshot back into the original disk image.</p>
+<h2>Supported Qemu Versions</h2>
+<p><em>Qemu</em> is the hardware emulator used with <em>KVM</em>, the Linux kernel module that enables virtualization  and <em>Libvirt</em>, the user-space virtual resource manager. You need to be using <em>Qemu</em> version <strong>2.5</strong> or greater to create external snapshots. This is a problem if you're running CentOS 7, but it is easily remedied by installing the version of the qemu-kvm package from the oVirt/RHEV
+repositories. If you are using Ubuntu then it will be included in the package available in the repos.</p>
+<h3>Using oVirt Repo on CentOS 7</h3>
+<div class="highlight"><pre><span></span>yum install centos-release-qemu-ev qemu-kvm-ev
+</pre></div>
+
+
+<hr>
+<h3>Qemu Guest Agent</h3>
+<blockquote>
+<p><strong>Note:</strong> You should install the <strong>qemu-guest-agent</strong> package on all of your guests. Having the agent installed
+allows you to perform operations on the guest machine without logging in such as freezing the
+file system, rebooting and shutdown safely. We will issue a flag with our snapshot command that
+freezes the file system during the time which it is taken to ensure there is no data loss.  </p>
+</blockquote>
+<h3>How to set-up the qemu-guest-agent</h3>
+<p>On the guest machine install the <code>qemu-guest-agent</code> package using yum, dnf or apt depending on
+your distro.  </p>
+<p><strong>Create a virtual device in the guests definition</strong>  </p>
+<p><code>virsh edit YOUR_DOMAIN</code> </p>
+<p><strong>Inside the tagsa</strong>  </p>
+<p><code>&lt;devices&gt;&lt;/devices&gt;</code></p>
+<p><strong>Insert:</strong>  </p>
+<div class="highlight"><pre><span></span><span class="nt">&lt;channel</span> <span class="na">type=</span><span class="s">&#39;unix&#39;</span><span class="nt">&gt;</span>
+     <span class="nt">&lt;target</span> <span class="na">type=</span><span class="s">&#39;virtio&#39;</span> <span class="na">name=</span><span class="s">&#39;org.qemu.guest_agent.0&#39;</span><span class="nt">/&gt;</span>
+     <span class="nt">&lt;address</span> <span class="na">type=</span><span class="s">&#39;virtio-serial&#39;</span> <span class="na">controller=</span><span class="s">&#39;0&#39;</span> <span class="na">bus=</span><span class="s">&#39;0&#39;</span> <span class="na">port=</span><span class="s">&#39;1&#39;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/channel&gt;</span>
+</pre></div>
+
+
+<p>*<strong>Note:</strong> If you already have a serial port on the guest, you may need to change <strong>port='1'</strong> to a higher port number.  </p>
+<p>Now you can use the <em><strong>--quiesce</strong></em> flag with <em>virsh</em> commands to freeze a guest machine's file machine.  </p>
+<hr>
+<h2>The Snapshot Command</h2>
+<p>We will use the <strong>virsh</strong> tool.  </p>
+<p>The <em>domain</em> is the name your guest was defined as. To see a list of all guest domains on your system 
+you can run:  </p>
+<div class="highlight"><pre><span></span><span class="err">virsh list --all</span>
+</pre></div>
+
+
+<p>To see the virtual disks in use by a given domain:  </p>
+<div class="highlight"><pre><span></span><span class="err">virsh domblklist YOUR_DOMAIN</span>
+</pre></div>
+
+
+<p>Here is example output for my Katello host:  </p>
+<div class="highlight"><pre><span></span>$ virsh domblklist katello
+Target     Source
+------------------------------------------------
+vda        /vm_storage/foreman-katello.qcow2
+</pre></div>
+
+
+<p>To see a domain's current snapshots:  </p>
+<div class="highlight"><pre><span></span><span class="err">virsh snapshot-list YOUR_DOMAIN</span>
+</pre></div>
+
+
+<hr>
+<h2>Taking the snapshot</h2>
+<div class="highlight"><pre><span></span>virsh snapshot-create-as <span class="se">\</span>
+--domain YOUR_DOMAIN guest-state-1 <span class="se">\</span>
+--diskspec vda,file<span class="o">=</span>/your/storage/pool/YOUR_DOMAIN-overlay-1.qcow2 <span class="se">\</span>
+--disk-only --atomic --quiesce
+</pre></div>
+
+
+<p>The <code>virsh domblklist</code> command should now show the overlay image as the virtual disk in use.  </p>
+<p>You are now able to copy the original disk image to a backup location as it is not being 
+actively written to. </p>
+<p>Once the copy is finished it's time to perform a live block commit:  </p>
+<div class="highlight"><pre><span></span>virsh blockcommit YOUR_DOMAIN vda --active --verbose --pivot
+</pre></div>
+
+
+<p>If successful you see the following output:  </p>
+<div class="highlight"><pre><span></span>Performing live block commit...
+Block commit: <span class="o">[</span><span class="m">100</span> %<span class="o">]</span>
+Successfully pivoted
+</pre></div>
+
+
+<p>And that's it! A successful external snapshot with live block commit.  </p>
+<h4>Scripting It</h4>
+<p>I have written a shell script that performs a live snapshot and backup with the following usage:<br>
+<code>./live-blockcommit-snap YOUR_DOMAIN /your/backup/location</code>  </p>
+<div class="highlight"><pre><span></span><span class="ch">#!/bin/bash</span>
+<span class="c1">#</span>
+<span class="c1"># Take an external snapshot with virsh using live block commit feature</span>
+<span class="c1">#</span>
+<span class="c1"># Usage: ./live-blockcommit-snap domain-name /backup/destination </span>
+<span class="c1">#</span>
+<span class="c1"># Creates log collection directory in backup-destination</span>
+<span class="c1">#</span>
+<span class="c1"># You must have the qemu-guest-agent installed and enabled on the guest, otherwise</span>
+<span class="c1"># the --quiesce argument must be removed from the snapshot-create command</span>
+<span class="c1"># before the script will function. </span>
+<span class="c1">#</span>
+<span class="c1"># Nicholas Ferguson 2018 MIT License https://gitlab.com/nickopotamus/</span>
+
+
+<span class="nv">DOMAIN</span><span class="o">=</span><span class="nv">$1</span>
+
+<span class="c1"># check if guest is running</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="k">$(</span>virsh list --all <span class="p">|</span> grep <span class="s2">&quot;</span><span class="nv">$DOMAIN</span><span class="s2">&quot;</span> <span class="p">|</span> awk <span class="s1">&#39;{print $3}&#39;</span> <span class="p">|</span> awk <span class="s1">&#39;NR==1{print $1}&#39;</span><span class="k">)</span> <span class="o">==</span> <span class="s2">&quot;running&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+  <span class="nb">echo</span> <span class="s2">&quot;Guest running...continuing...&quot;</span>
+<span class="k">else</span>
+  <span class="nb">echo</span> <span class="s2">&quot;Guest is not running...stopping...&quot;</span>
+  <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="c1"># check for correct arguments</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;</span><span class="nv">$#</span><span class="s2">&quot;</span> -ne <span class="m">2</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+  <span class="nb">echo</span> <span class="s2">&quot;Missing arguments! Provide domain and backup directory.&quot;</span> &gt;<span class="p">&amp;</span><span class="m">2</span>
+  <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="c1"># does the backup destination exit</span>
+<span class="k">if</span> ! <span class="o">[</span> -e <span class="s2">&quot;</span><span class="nv">$2</span><span class="s2">&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+  <span class="nb">echo</span> <span class="s2">&quot;</span><span class="nv">$2</span><span class="s2"> not found!&quot;</span> &gt;<span class="p">&amp;</span><span class="m">2</span>
+  <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="c1"># is the backup destination a directory</span>
+<span class="k">if</span> ! <span class="o">[</span> -d <span class="s2">&quot;</span><span class="nv">$2</span><span class="s2">&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+  <span class="nb">echo</span> <span class="s2">&quot;</span><span class="nv">$2</span><span class="s2"> is not a directory!&quot;</span> &gt;<span class="p">&amp;</span><span class="m">2</span>
+  <span class="nb">exit</span> <span class="m">1</span>
+<span class="k">fi</span> 
+
+<span class="c1"># generate time stamp</span>
+<span class="nv">TIME</span><span class="o">=</span><span class="sb">`</span>date <span class="s2">&quot;+%Y%m%d-%H%M%S&quot;</span><span class="sb">`</span>
+
+<span class="nv">BACKUP_DEST</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$2</span><span class="s2">&quot;</span>/<span class="s2">&quot;</span><span class="nv">$1</span><span class="s2">&quot;</span>
+
+<span class="c1"># create backup dir if it does not exist</span>
+<span class="o">[</span> -d <span class="s2">&quot;</span><span class="nv">$BACKUP_DEST</span><span class="s2">&quot;</span> <span class="o">]</span> <span class="o">||</span> mkdir -p <span class="s2">&quot;</span><span class="nv">$BACKUP_DEST</span><span class="s2">&quot;</span>
+
+<span class="c1"># label snapshot with timestamp</span>
+<span class="nv">STATE</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$1</span><span class="s2">&quot;</span>_<span class="s2">&quot;</span><span class="nv">$TIME</span><span class="s2">&quot;</span>
+
+<span class="c1"># take care of logging</span>
+<span class="nv">LOG_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$2</span><span class="s2">&quot;</span>/snapshot_logs
+<span class="o">[</span> -d <span class="s2">&quot;</span><span class="nv">$LOG_DIR</span><span class="s2">&quot;</span> <span class="o">]</span> <span class="o">||</span> mkdir -p <span class="s2">&quot;</span><span class="nv">$LOG_DIR</span><span class="s2">&quot;</span>
+
+<span class="nv">SNAP_LOG</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$LOG_DIR</span><span class="s2">&quot;</span>/<span class="s2">&quot;</span><span class="nv">$DOMAIN</span><span class="s2">&quot;</span>_latest.log
+rm <span class="s2">&quot;</span><span class="nv">$SNAP_LOG</span><span class="s2">&quot;</span>
+touch <span class="s2">&quot;</span><span class="nv">$SNAP_LOG</span><span class="s2">&quot;</span>
+
+<span class="nb">exec</span> <span class="m">3</span>&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="m">4</span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="nb">trap</span> <span class="s1">&#39;exec 2&gt;&amp;4 1&gt;&amp;3&#39;</span> <span class="m">0</span> <span class="m">1</span> <span class="m">2</span> <span class="m">3</span>
+<span class="nb">exec</span> <span class="m">1</span>&gt;<span class="s2">&quot;</span><span class="nv">$SNAP_LOG</span><span class="s2">&quot;</span> <span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span>
+
+
+<span class="c1"># name the overlay file</span>
+<span class="nv">OVERLAY</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$STATE</span><span class="s2">&quot;</span>_overlay
+
+<span class="c1"># target is domain name, image is virtual disk file</span>
+<span class="nv">TARGET</span><span class="o">=</span><span class="sb">`</span>virsh domblklist --details <span class="s2">&quot;</span><span class="nv">$1</span><span class="s2">&quot;</span> <span class="p">|</span> grep ^file <span class="p">|</span> awk <span class="s1">&#39;{print $3}&#39;</span><span class="sb">`</span>
+<span class="nv">IMAGE</span><span class="o">=</span><span class="sb">`</span>virsh domblklist --details <span class="s2">&quot;</span><span class="nv">$1</span><span class="s2">&quot;</span> <span class="p">|</span> grep ^file <span class="p">|</span> awk <span class="s1">&#39;{print $4}&#39;</span><span class="sb">`</span>
+<span class="nv">POOLDIR</span><span class="o">=</span><span class="sb">`</span>dirname <span class="s2">&quot;</span><span class="nv">$IMAGE</span><span class="s2">&quot;</span><span class="sb">`</span>
+
+<span class="c1"># take the snapshot. will fail without a working qemu-guest-agent</span>
+virsh snapshot-create-as --domain <span class="s2">&quot;</span><span class="nv">$1</span><span class="s2">&quot;</span> <span class="s2">&quot;</span><span class="nv">$STATE</span><span class="s2">&quot;</span> <span class="se">\</span>
+--diskspec <span class="s2">&quot;</span><span class="nv">$TARGET</span><span class="s2">&quot;</span>,file<span class="o">=</span><span class="s2">&quot;</span><span class="nv">$POOLDIR</span><span class="s2">&quot;</span>/<span class="s2">&quot;</span><span class="nv">$OVERLAY</span><span class="s2">&quot;</span>.qcow2 <span class="se">\</span>
+--disk-only <span class="se">\</span>
+--atomic <span class="se">\</span>
+--quiesce
+
+<span class="c1"># perform the backup</span>
+<span class="nb">echo</span> <span class="s2">&quot;Copying image to backup location...&quot;</span>
+cp -a <span class="s2">&quot;</span><span class="nv">$IMAGE</span><span class="s2">&quot;</span> <span class="s2">&quot;</span><span class="nv">$BACKUP_DEST</span><span class="s2">&quot;</span>/<span class="s2">&quot;</span><span class="nv">$STATE</span><span class="s2">&quot;</span>
+
+<span class="c1"># live block commit</span>
+<span class="nb">echo</span> <span class="s2">&quot;Performing live block commit...&quot;</span>
+virsh blockcommit <span class="s2">&quot;</span><span class="nv">$1</span><span class="s2">&quot;</span> <span class="s2">&quot;</span><span class="nv">$TARGET</span><span class="s2">&quot;</span> --active --verbose --pivot
+
+<span class="c1"># remove the overlay file</span>
+rm <span class="s2">&quot;</span><span class="nv">$POOLDIR</span><span class="s2">&quot;</span>/<span class="s2">&quot;</span><span class="nv">$OVERLAY</span><span class="s2">&quot;</span>.qcow2
+
+<span class="c1"># remove the snapshot from domain</span>
+virsh snapshot-delete <span class="nv">$1</span> --metadata <span class="s2">&quot;</span><span class="nv">$STATE</span><span class="s2">&quot;</span>
+
+<span class="nb">echo</span> <span class="s1">&#39;Current snapshots attached to this guest:&#39;</span>
+virsh snapshot-list <span class="nv">$1</span>
+<span class="nb">echo</span> <span class="s1">&#39;------------------------&#39;</span>
+
+<span class="nb">echo</span> <span class="s1">&#39;Most recent external snapshots:&#39;</span>
+ls <span class="s2">&quot;</span><span class="nv">$BACKUP_DEST</span><span class="s2">&quot;</span>
+<span class="nb">echo</span> <span class="s1">&#39;------------------------&#39;</span>
+
+<span class="nb">echo</span> <span class="s1">&#39;Current disk image in use:&#39;</span>
+virsh domblklist <span class="nv">$DOMAIN</span>
+</pre></div>
+		    <div class="tags">
+		        <p>tags: <a href="../../tag/virtualization.html">virtualization</a><a href="../../tag/libvirt.html">libvirt</a><a href="../../tag/kvm.html">kvm</a></p>
+		    </div>
+
+<div class="sharing">
+</div>
+<hr>
+
+	</section>
+	<div class="clearfix"></div>
+
+</article>
+
+	</div>
+
+	<!-- Sidebar -->
+	<div class="four columns">
+		<!-- About  -->
+		<div class="widget no-mg-top">
+			<h3 class="headline">About</h3><span class="line"></span><div class="clearfix"></div>
+			<p>Build and Release Platform Developer located in Clearwater, FL. Special focus on Linux & Containerized Apps, .NET Core, PowerShell, Build & Automation.</p>
+		</div>
+
+		<!-- Categories -->
+		<div class="widget">
+			<h3 class="headline">Categories</h3><span class="line"></span><div class="clearfix"></div>
+			<nav class="categories">
+				<ul>
+					    <li><a href="../../category/articles.html">Articles</a></li>
+					    <li class="active"><a href="../../category/tutorials.html">Tutorials</a></li>
+				</ul>
+			</nav>
+		</div>
+		
+		<!-- Tags -->
+		<div class="widget">
+			<h3 class="headline">Tags</h3><span class="line"></span><div class="clearfix"></div>
+			<nav class="tags">				    <a href="../../tag/applications.html">applications</a>
+				    <a href="../../tag/dns.html">dns</a>
+				    <a href="../../tag/freeipa.html">freeipa</a>
+				    <a href="../../tag/identity.html">identity</a>
+				    <a href="../../tag/kvm.html">kvm</a>
+				    <a href="../../tag/lab.html">lab</a>
+				    <a href="../../tag/libvirt.html">libvirt</a>
+				    <a href="../../tag/networking.html">networking</a>
+				    <a href="../../tag/openvswitch.html">OpenVSwitch</a>
+				    <a href="../../tag/platforms.html">platforms</a>
+				    <a href="../../tag/python.html">python</a>
+				    <a href="../../tag/snippets.html">snippets</a>
+				    <a href="../../tag/virtualization.html">virtualization</a>
+			</nav>
+		</div>
+	</div>
+			</div>
+			<!-- Container / End -->
+		</div>
+		<!-- Content Wrapper / End -->
+
+		<div id="footer-bottom">
+			<!-- Container -->
+			<div class="container">
+				<div class="eight columns">&copy; Copyright 2020 Nick Ferguson || Blog powered by <a href="http://getpelican.com">Pelican</a></div>
+					<div class="eight columns">
+						<ul class="social-icons-footer">
+								<li>
+									<a href="https://github.com/NickCrew" class="tooltip top" title="Github">
+										<i class="icon-github"></i>
+									</a>
+								</li>
+								<li>
+									<a href="https://www.youtube.com/channel/UC972wwbPrKXW-YlXCPGPbQw" class="tooltip top" title="YouTube">
+										<i class="icon-youtube"></i>
+									</a>
+								</li>
+								<li>
+									<a href="https://twitter.com/piggahmonster" class="tooltip top" title="Twitter">
+										<i class="icon-twitter"></i>
+									</a>
+								</li>
+							<li><a href="../../blog/feeds/all.atom.xml" class="tooltip top" title="RSS"><i class="icon-rss"></i></a></li>
+						</ul>
+					</div>
+			</div>
+			<!-- Container / End -->
+		</div>
+		<!-- Footer Bottom / End -->
+
+	<!-- Javascripts -->
+	<script src="../../theme/js/jquery.min.js"></script>
+	</body>
+</html>

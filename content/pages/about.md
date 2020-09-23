@@ -1,7 +1,6 @@
 Title: About
 Slug: about
 
-
 ---
 ## Bio
 Life-long Linux and FOSS enthusiast. Living in Clearwater, FL for over six
