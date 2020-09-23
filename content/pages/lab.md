@@ -3,7 +3,7 @@ Category: Articles
 Tag: Lab, Virtualization
 Slug: homelab
 
----
+# Synopsis
 I love having some enterprise-grade gear in my home to try new software and work on projects with the goal of providing business value to my employers and advancing my career through an always-improving, current skillset. Also it's great fun for me and I really enjoy the challenge and satisfaction of new problems to solve every day. Without further ado, the details of my lab:     
 # Hardware Resources
 
