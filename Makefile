@@ -8,6 +8,9 @@ OUTPUTDIR=$(BASEDIR)/output/*
 CONFFILE=$(BASEDIR)/pelicanconf.py
 PUBLISHCONF=$(BASEDIR)/publishconf.py
 
+DOCBOOKHTML=$(BASEDIR)/doc-book/html
+DOCBOOKOUTDIR=$(BASEDIR)/output/docbook
+
 SSH_HOST=piggah.xyz
 SSH_TARGET_DIR=${DEPLOY_TARGET_DIR}/.
 
@@ -73,5 +76,8 @@ publish:
 
 ssh_upload:
 	scp -rfv ./output/* piggah.xyz:/var/www/piggah.xyz/html/.
+
+publish_docbook:
+	cp -rf "$(DOCBOOKHTML)" "$(DOCBOOKOUTDIR)"
 
 .PHONY: html help clean regenerate serve serve-global devserver publish 

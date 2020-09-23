@@ -1,0 +1,929 @@
+= Virtual Infrastructure Docs: Documentation for Hypervisors, SDN, Containers and Virtual Devices
+Nick Ferguson <contact@nickcrew.xyz>
+v1.0, September 7, 2018
+:toc: left
+:toclevels: 6
+:source-highlighter: pygments
+
+---
+== Libvirt
+
+=== Packages
+*install libvirt/kvm/qemu hypervisor*
+
+`$ yum install qemu-kvm qemu-img virt-manager libvirt libvirt-python libvirt-client virt-install virt-viewer bridge-utils`
+
+*x packages if you want to forward virt-manager over ssh*
+
+`$ yum install "@X Window System" xorg-x11-xauth xorg-x11-fonts-* xorg-x11-utils -y`
+
+*additional useful packages, also needed for OVS*
+
+`$ yum -y install make gcc openssl-devel autoconf automake rpm-build redhat-rpm-config python-devel openssl-devel kernel-devel kernel-debug-devel libtool wget`
+
+
+=== VM Install Methods
+
+==== Virt-install
+
+*…Using Kickstart*
+
+1.  Create new image
+`qemu-img create -f qcow2 -o preallocation=metadata,lazy_refcounts=on vmname.qcow2 12G`
+2.  virt-install:
+
+[source,bash]
+----
+virt-install --name vm5-centos --memory 1024 --vcpus 1 --disk pool=vm_storage,size=8 --location=/var/lib/kimchi/isos/CentOS-7-x86_64-Minimal-1708.iso --graphics none --initrd-inject=/root/ks.cfg -x "console=ttyS0 ks=file:/ks.cfg" --network=network=ovs-network,portgroup=vlan-50
+----
+
+*Add a terminal-accessible console:*
+`--extra-args 'console=ttyS0,115200n8 serial'`
+
+*Using Preseed*
+
+[source,bash]
+----
+virt-install --name xenial-test --vcpus 1 --memory 512 --disk pool=vm_storage,size=8,bus=virtio --location=http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64 --network=default --graphics none --initrd-inject=/root/preseed.cfg -x "console=ttyS0"
+----
+
+bionic
+`http://archive.ubuntu.com/ubuntu/dists/bionic/main/installer-amd64`
+
+'''''
+
+==== Cloud-init
+
+
+*virt-install command*
+
+[source,bash]
+----
+virt-install -n example -r 512 -w network=default \
+  --disk /vm_storage/new_instance.qcow2 --import \
+  --disk path=config.iso,device=cdrom
+----
+
+*iso generation*
+`genisoimage -output bionic-2.iso -volid cidata -joliet -rock user-data meta-data`
+
+'''''
+
+==== Vagrant Libvirt
+
+Install Vagrant +
+Install prerequisites for libvirt provider: `sudo yum install -y gcc libvirt-devel` +
+Install libvirt provider: `vagrant plugin install vagrant-libvirt` +
+Install mutate vagrant plugin: `vagrant plugin install vagrant-mutate` +
+Install rekey-ssh vagrant plugin: `vagrant plugin install vagrant-rekey-ssh` +
+
+
+=== System Administration
+
+==== External Snapshots
+
+
+*If host is running:* Take a —memspec snapshot
+
+[source,bash]
+----
+virsh snapshot-create-as \
+    --domain $DOMAIN $SNAPSHOT_NAME \
+    --diskspec vda,file=$DISK_FILE,snapshot=external \
+    --memspec file=$MEM_FILE,snapshot=external \
+    --atomic
+----
+
+*If host is stopped:* Take a —diskspec snapshot
+
+[source,bash]
+----
+virsh snapshot-create-as \
+    --domain $DOMAIN $SNAPSHOT_NAME \
+    --diskspec vda,file=$DISK_FILE,snapshot=external \
+    --disk-only \
+    --atomic
+----
+
+'''''
+
+==== Live disk backup with ative block commit
+
+
+*1. List Current Block Device*
+
+[source,bash]
+----
+$ virsh domblklist vm1
+Target     Source
+------------------------------------------------
+vda        /export/images/base.qcow2
+----
+
+*2. Create external snapshot*
+
+[source,bash]
+----
+$ virsh snapshot-create-as --domain vm1 guest-state1 \
+    --diskspec vda,file=/vm_storage/overlay1.qcow2 \
+    --disk-only --atomic
+----
+
+*3. Copy the original to backup location*
+`$ cp orig_img.qcow2 /QNAP/Backups/vm_backups/$DOMAIN/domain-timedate.qcow2`
+
+*4. Perform active block commit*
+`virsh blockcommit vm1 vda --active --verbose —pivot`
+
+*5. Optional: Delete overlay created* `$ rm domain-state1.qcow2`
+
+'''''
+
+==== Virsh Domain Clone
+
+
+*1. Generate new xml file for the guest*
+
+[source,bash]
+----
+sudo virt-clone \
+  --original $BASE_GUEST_DOMAIN \
+  --name $NEW_GUEST_DOMAIN \
+  --file=$NEW_GUEST_DISK \
+  --preserve-data \
+  --print-xml > $NEW_GUEST_XML_PATH
+----
+
+*2. Define the new guest*
+
+[source,bash]
+----
+$ sudo virsh define $NEW_GUEST_XML_PATH
+$ sudo rm $NEW_GUEST_XML_PATH
+----
+
+*3. Provisioning - from inside the new guest (or with Ansible) run:*
+
+[source,bash]
+----
+$ sudo /bin/rm -v /etc/ssh/ssh_host_*
+$ sudo dpkg-reconfigure openssh-server
+----
+
+'''''
+
+*Raw-backed qcow2 overlay: Preparation and Provisioning*
+
+1.  Create the raw-backed overlay:
+`qemu-img create -b base_file.img -f qcow2 new_file.ovl`
+2.  Run virt-sysprep to strip out all settings:
+`virt-sysprep -a $IMAGE_NAME --hostname new_hostname`
+3.  virt-install import
++
+[source,bash]
+----
+virt-install --import --name $DOMAIN \
+--memory 1024 --vcpus 1 \
+--os-type=linux --os-variant=centos7.0 \
+--disk=/vm_storage/new_image.ovl \
+--network bridge=virbr0 \
+--noautoconsole --vnc --vnclisten 0.0.0.0
+----
++
+
+'''''
++
+*Ubuntu-specific Provisioning Steps - Manual*
++
+__Ubuntu:__Set new hostname:
+* edit /etc/hosts
++
+[source,plaintext]
+----
+127.0.0.1   new-hostname
+127.0.1.1   new-hostname.piggah.lan
+----
+* `sudo hostname new-hostname.piggah.lan`
++
+*Ubuntu:* Generate new SSH Host Keys
+`sudo dpkg-reconfigure openssh-server && sudo systemctl restart sshd`
++
+`mkdir .ssh && chmod 700 .ssh && touch .ssh/authorized_keys && chmod 644 .ssh/authorized_keys`
++
+Copy keys in if available
+
+'''''
+
+*Enable trim on SCSI LVM virtual disk*
+
+`discard="unmap"`
+
+'''''
+
+*Serial console enable on debian system*
+
+[source,bash]
+....
+$ sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"quiet console=ttyS0\"/" /etc/default/grub; sudo update-grub;'
+....
+
+
+=== Networking
+
+==== Virt Use NFS
+
+`setsebool virt_use_nfs 1` +
+
+'''''
+
+==== Set PXE Boot server in Libvirt NAT network
+
+....
+<ip address=’192.168.212.1’ netmask=’255.255.255.0’>
+     <dhcp>
+       <range start=’192.168.212.3’ end=’192.168.212.254’ />
+       <bootp file=’/pxelinux.0’ server=’192.168.212.2’ />
+     </dhcp>
+   </ip>
+....
+
+Or is it perhaps... +
+`<tftp root='/var/lib/tftp' />` +
+
+Guest domain xml needs to contain: +
+`<boot dev='network'/>` +
+
+'''''
+
+== QEMU-KVM
+
+---
+
+=== Packages
+
+TIP: You need qemu-kvm-ev package for certain features. Specifically live
+snapshot with block commit
+
+[source,bash]
+----
+  yum install centos-release-qemu-ev
+  yum install qemu-kvm-ev
+----
+
+=== Administration
+
+==== qemu guest agent
+
+Install `qemu-guest-agent` package on VM +
+Then, +
+`virsh edit $DOMAIN` +
+
+[source,xml]
+....
+<channel type='unix'>
+     <target type='virtio' name='org.qemu.guest_agent.0'/>
+     <address type='virtio-serial' controller='0' bus='0' port='1'/>
+   </channel>
+....
+
+---
+
+==== Virtual Disks
+
+===== Backing Files
+
+====== Rebase Images
+
+1.  Copy original base file to standalone image `cp dev.bak devplus.img`
+2.  Rebase the image file that was backed off the original so that it
+now uses the new file `qemu-img rebase -b devplus.img dev.img`
+3.  Commit the changes in dev file back to new base
+`qemu-img commit dev.img`
+
+'''''
+
+====== Increase qcow2 performance
+
+
+`qemu-img create -f qcow2 -o preallocation=metadata,lazy_refcounts=on vmname.qcow2`
+
+With: +
+ `virsh-edit` +
+
+[source,xml]
+....
+<driver name='qemu' type='raw' cache=‘writeback’ io='native'/>
+....
+
+'''''
+
+====== Change path of backing file
+
+[source,bash]
+----
+sudo qemu-img rebase \
+  -f qcow2 \
+  -u \
+  -b $NEW_BACKING_FILE_LOCATION \
+  $QCOW2_FILE_TO_CHANGE
+----
+
+====== Change backing file completely
+
+[source,bash]
+----
+sudo qemu-img rebase \
+  -f qcow2 \
+  -b $NEW_BACKING_FILE \
+  $QCOW2_FILE_TO_CHANGE
+----
+
+'''''
+
+== Virsh
+
+---
+
+=== Basic Commands
+
+[source,bash]
+....
+virsh start
+virsh shutdown // graceful
+virsh destroy // hard kill
+virsh autostart // set to start on server boot
+virsh autostart --disable
+virsh list // shows all powered on
+virsh list --all // includes powered off
+virsh list --autostart -all // show vms set to autostart, remove all for only list of running
+virsh vncdisplay // show vnc console instance for guest, ie :1 = port 5901, :2 = 5902 (by default)
+virsh import // import from xml file
+virsh dumpxml // export existing vm to xml file
+virsh edit // opens your default editor for an existing VM to directly edit the xml config
+....
+
+==== enable virsh console
+on guest:
+....
+$ sudo systemctl enable serial-getty@ttyS0.service
+$ sudo systemctl start serial-getty@ttyS0.service
+....
+`virsh console DOMAIN` +
+
+==== enable qemu-guest-agent
+
+`virsh edit domain` +
+
+[source,bash]
+----
+<channel type="unix">
+  <source mode="bind"/>
+  <target type="virtio" name="org.qemu.guest_agent.0"/>
+</channel>
+----
+
+=== Virt-install
+
+==== ISO install
+
+[source,bash]
+....
+virt-install -n testvm1 \
+  -r 2048 --vcpus=1 --cpu host \
+  --os-type=linux --os-variant=centos7.0 \
+  --disk /vms/testvm1/testvm1.qcow2,device=disk,bus=virtio,size=60,sparse=true,format=qcow2 \
+  --network bridge=br0,model=virtio \
+  -c /data/iso/CentOS-7-x86_64-DVD-1611.iso \
+  --vnc --vnclisten 0.0.0.0 --noautoconsole
+....
+
+==== PXE install
+
+[source,bash]
+....
+virt-install -n testvm2 \
+  -r 2048 --vcpus=1 --cpu host \
+  --os-type=linux --os-variant=ubuntu16.04 \
+  --disk /vms/testvm2/testvm2.qcow2,device=disk,bus=virtio,size=60,sparse=true,format=qcow2 \
+  --network bridge=br0,model=virtio,mac=52:54:00:fa:12:3c --pxe \
+  --vnc --vnclisten 0.0.0.0 --noautoconsole
+....
+
+---
+
+
+== OpenVSwitch
+
+---
+
+=== ovs-vsctl
+
+==== Configuring Ports
+
+===== Create internal port
+`$ ovs=vsctl add-port ovsbr0 vlan9 \-- set interface vlan9 type=internal` +
+
+===== tag a port
+`$ ovs-vsctl set port ovsbr0 tag=9` +
+
+===== trunk a port
+`$ ovs-vsctl set port vnet0 trunks=20,30,40` +
+
+===== Patch Ports
+
+[source,bash]
+----
+ovs-vsctl add-port <bridge name> <port name>
+ovs-vsctl set interface <port name> type=patch
+ovs-vsctl set interface <port name> options:peer=<peer name>
+----
+
+'''''
+
+===== Interal ports
+
+`vi ifcfg-intport`
+
+'''''
+
+=== Standard OVS bridge w/ libvirt network and VLANS
+
+==== Add and configure the OVS Bridge
+
+You must trunk the cable coming into the interface you will bridge.
+
+`$ ovs-vsctl add-br ovsbr0`
+
+`$ ovs-vsctl add-port ovsbr0 eth0`
+
+`$ touch /tmp/ovs-network.xml`
+
+`$ virsh net-define /tmp/ovs-network.xml` +
+
+==== Configure the physical interface
+
+Remove ip from eth0 if necessary: `$ ip addr del 0.0.0.0 dev eth0`
+
+Set dhclient to the ovs bridge `$ dhclient ovsbr0`
+
+==== Create the libvirt network
+
+ovs-network.xml template: add vlans as needed.
+
+[source,xml]
+----
+<network>
+  <name>ovs-network</name>
+  <uuid>92645f9d-799d-4611-9f65-729769efbc3b</uuid>
+  <forward mode='bridge'/>
+  <bridge name='ovsbr0'/>
+  <virtualport type='openvswitch'/>
+  <portgroup name='vlan-01' default='yes'>
+  </portgroup>
+  <portgroup name='vlan-50'>
+    <vlan>
+      <tag id='50'/>
+    </vlan>
+  </portgroup>
+  <portgroup name='vlan-all'>
+    <vlan trunk='yes'>
+      <tag id='50'/>
+      <tag id='60'/>
+    </vlan>
+  </portgroup>
+</network>
+----
+
+===== Set dhcp to renew on ovsbr0
+`$ vi /etc/sysconfig/network-scripts/ifcfg-ovsbr0`
+
+[source,bash]
+----
+BOOTPROTO=dhcp
+DEVICE=ovsbr0
+DEVICETYPE=ovs
+HOTPLUG=no
+NM_CONTROLLED=no
+ONBOOT=yes
+TYPE=OVSBridge
+OVS_EXTRA="set Interface $DEVICE mac=\ '00:1b:21:a9:69:24\' "
+----
+
+'''''
+
+==== Virtual Machines
+
+===== Define vnet for a given guest
+
+Use virsh edit $domain to modify: `<target dev='my_vnet_def' />`
+
+Example:
+
+[source,p]
+----
+<interface type='network'>
+      <mac address='52:54:00:b0:6c:5f'/>
+      <source network='default'/>
+      <target dev='vm_f17_vm'/>
+      <model type='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x03'
+function='0x0'/>
+    </interface>
+----
+
+'''''
+
+=== OVS on Ubuntu 18.10
+
+Need to set a systemd script to use ifup/down
+
+....
+# /etc/systemd/system/ovs-network.service
+
+[Unit]
+Description=Openvswitch - Raise network OVS interfaces
+DefaultDependencies=no
+Wants=network.target
+After=local-fs.target network-pre.target apparmor.service systemd-sysctl.service systemd-modules-load.service ovsdb-server.service ovs-vswitchd.service
+Before=network.target shutdown.target network-online.target
+Conflicts=shutdown.target
+
+[Install]
+WantedBy=multi-user.target
+WantedBy=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/networking
+ExecStartPre=-/bin/sh -c '[ "$CONFIGURE_INTERFACES" != "no" ] && [ -n "$(ifquery --read-environment --list --exclude=lo)" ] && udevadm settle'
+ExecStart=/sbin/ifup -a --read-environment --allow=ovs
+ExecStop=/sbin/ifdown -a --read-environment --allow=ovs
+RemainAfterExit=true
+TimeoutStartSec=5min
+....
+
+
+=== Network Interface Scripts
+
+.Internal Port
+[source,bash]
+----
+BOOTPROTO=static
+IPADDR=192.168.50.20
+NETMASK=255.255.255.0
+DEVICE=vlan50
+DEVICETYPE=ovs
+HOTPLUG=no
+NM_CONTROLLED=no
+ONBOOT=yes
+OVS_BRIDGE=bridge00
+TYPE=OVSPort
+----
+
+'''''
+
+....
+ - DEVICETYPE: Always set to "ovs".
+
+    - TYPE: If this is "OVSBridge", then this file represents an OVS
+      bridge named <name>.  Otherwise, it represents a port on an OVS
+      bridge and TYPE must have one of the following values:
+
+        * "OVSPort", if <name> is a physical port (e.g. eth0) or
+          virtual port (e.g. vif1.0).
+
+        * "OVSIntPort", if <name> is an internal port (e.g. a tagged
+          VLAN).
+
+        * "OVSBond", if <name> is an OVS bond.
+
+        * "OVSTunnel", if <name> is an OVS tunnel.
+
+        * "OVSPatchPort", if <name> is a patch port
+
+    - OVS_BRIDGE: If TYPE is anything other than "OVSBridge", set to
+      the name of the OVS bridge to which the port should be attached.
+
+    - OVS_OPTIONS: Optionally, extra options to set in the "Port"
+      table when adding the port to the bridge, as a sequence of
+      column[:key]=value options.  For example, "tag=100" to make the
+      port an access port for VLAN 100.  See the documentation of
+      "add-port" in ovs-vsctl(8) for syntax and the section on the
+      Port table in ovs-vswitchd.conf.db(5) for available options.
+
+    - OVS_EXTRA: Optionally, additional ovs-vsctl commands, separated
+      by "--" (double dash).
+
+    - BOND_IFACES: For "OVSBond" interfaces, a list of physical
+      interfaces to bond together.
+
+    - OVS_TUNNEL_TYPE: For "OVSTunnel" interfaces, the type of the tunnel.
+      For example, "gre", "vxlan", etc.
+
+    - OVS_TUNNEL_OPTIONS: For "OVSTunnel" interfaces, this field should be
+      used to specify the tunnel options like remote_ip, key, etc.
+
+    - OVS_PATCH_PEER: For "OVSPatchPort" devices, this field specifies
+      the patch's peer on the other bridge.
+
+Note:
+
+* "ifdown" on a bridge will not bring individual ports on the bridge
+down.  "ifup" on a bridge will not add ports to the bridge.  This
+behavior should be compatible with standard bridges (with
+TYPE=Bridge).
+
+* If 'ifup' on an interface is called multiple times, one can see
+"RTNETLINK answers: File exists" printed on the console. This comes from
+ifup-eth trying to add zeroconf route multiple times and is harmless.
+....
+
+==== Examples
+
+.Standalone bridge:
+[source,bash]
+....
+===> ifcfg-ovsbridge0 <==
+DEVICE=ovsbridge0
+ONBOOT=yes
+DEVICETYPE=ovs
+TYPE=OVSBridge
+BOOTPROTO=static
+IPADDR=A.B.C.D
+NETMASK=X.Y.Z.0
+HOTPLUG=no
+....
+
+Enable DHCP on the bridge:
+
+* Needs OVSBOOTPROTO instead of BOOTPROTO.
+* All the interfaces that can reach the DHCP server
+as a space separated list in OVSDHCPINTERFACES.
+
+[source,bash]
+....
+DEVICE="ovsbridge0"
+ONBOOT="yes"
+DEVICETYPE="ovs"
+TYPE="OVSBridge"
+OVSBOOTPROTO="dhcp"
+OVSDHCPINTERFACES="eth0"
+HOTPLUG="no"
+....
+
+.Adding Internal Port to ovsbridge0:
+[source,bash]
+....
+===> ifcfg-intbr0 <==
+DEVICE=intbr0
+ONBOOT=yes
+DEVICETYPE=ovs
+TYPE=OVSIntPort
+OVS_BRIDGE=ovsbridge0
+HOTPLUG=no
+....
+
+.Internal Port with fixed IP address:
+[source,bash]
+....
+DEVICE=intbr0
+ONBOOT=yes
+DEVICETYPE=ovs
+TYPE=OVSIntPort
+OVS_BRIDGE=ovsbridge0
+BOOTPROTO=static
+IPADDR=A.B.C.D
+NETMASK=X.Y.Z.0
+HOTPLUG=no
+....
+
+
+.Adding physical eth0 to ovsbridge0 described above:
+[source,bash]
+....
+===> ifcfg-eth0 <==
+DEVICE=eth0
+ONBOOT=yes
+DEVICETYPE=ovs
+TYPE=OVSPort
+OVS_BRIDGE=ovsbridge0
+BOOTPROTO=none
+HOTPLUG=no
+....
+
+.Tagged VLAN interface on top of ovsbridge0:
+[source,bash]
+....
+===> ifcfg-vlan100 <==
+DEVICE=vlan100
+ONBOOT=yes
+DEVICETYPE=ovs
+TYPE=OVSIntPort
+BOOTPROTO=static
+IPADDR=A.B.C.D
+NETMASK=X.Y.Z.0
+OVS_BRIDGE=ovsbridge0
+OVS_OPTIONS="tag=100"
+OVS_EXTRA="set Interface $DEVICE external-ids:iface-id=$(hostname -s)-$DEVICE-vif"
+HOTPLUG=no
+....
+
+.Bonding:
+[source,bash]
+....
+===> ifcfg-bond0 <==
+DEVICE=bond0
+ONBOOT=yes
+DEVICETYPE=ovs
+TYPE=OVSBond
+OVS_BRIDGE=ovsbridge0
+BOOTPROTO=none
+BOND_IFACES="gige-1b-0 gige-1b-1 gige-21-0 gige-21-1"
+OVS_OPTIONS="bond_mode=balance-tcp lacp=active"
+HOTPLUG=no
+....
+
+[source,bash]
+....
+===> ifcfg-gige-* <==
+DEVICE=gige-*
+ONBOOT=yes
+HOTPLUG=no
+....
+
+.Link Aggregation
+[source,bash]
+....
+DEVICE="bond0"
+ONBOOT="yes"
+DEVICETYPE="ovs"
+TYPE="OVSBond"
+OVS_BRIDGE="ovsbr0"
+BOOTPROTO="none"
+BOND_IFACES="eth0 eth1"
+OVS_OPTIONS="bond_mode=balance-tcp lacp=active"
+HOTPLUG="no"
+....
+
+.An Open vSwitch Tunnel:
+[source,bash]
+....
+===> ifcfg-gre0 <==
+DEVICE=ovs-gre0
+ONBOOT=yes
+DEVICETYPE=ovs
+TYPE=OVSTunnel
+OVS_BRIDGE=ovsbridge0
+OVS_TUNNEL_TYPE=gre
+OVS_TUNNEL_OPTIONS="options:remote_ip=A.B.C.D"
+....
+
+.Patch Ports:
+[source,bash]
+....
+===> ifcfg-patch-ovs-0 <==
+DEVICE=patch-ovs-0
+ONBOOT=yes
+DEVICETYPE=ovs
+TYPE=OVSPatchPort
+OVS_BRIDGE=ovsbridge0
+OVS_PATCH_PEER=patch-ovs-1
+....
+
+[source,bash]
+....
+===> ifcfg-patch-ovs-1 <==
+DEVICE=patch-ovs-1
+ONBOOT=yes
+DEVICETYPE=ovs
+TYPE=OVSPatchPort
+OVS_BRIDGE=ovsbridge1
+OVS_PATCH_PEER=patch-ovs-0
+....
+
+==== fake bridge configuration
+
+[source,bash]
+....
+DEVICE=vlan65
+DEVICETYPE=ovs
+TYPE=OVSBridge
+ONBOOT=yes
+BOOTPROTO=static
+STP=off
+NM_CONTROLLED=no
+HOTPLUG=no
+OVS_EXTRA="br-set-external-id $DEVICE bridge-id $DEVICE"
+OVS_OPTIONS="br0 65"
+....
+
+.Variation of fake bridge
+[source,bash]
+....
+===> ifcfg-vlan100 <==
+DEVICE=vlan12
+ONBOOT=yes
+DEVICETYPE=ovs
+TYPE=OVSIntPort
+BOOTPROTO=static
+IPADDR=A.B.C.D
+NETMASK=X.Y.Z.0
+OVS_BRIDGE=ovsbr
+OVS_OPTIONS="tag=12"
+OVS_EXTRA="set Interface $DEVICE external-ids:iface-id=$(hostname -s)-$DEVICE-vif"
+HOTPLUG=no
+....
+
+'''''
+
+== Vagrant
+
+---
+
+=== VagrantFile Config Options
+
+==== Multiple boxes
+....
+Vagrant.configure("2") do |config|
+  config.vm.provision "shell", inline: "echo Hello"
+
+  config.vm.define "web" do |web|
+    web.vm.box = "apache"
+  end
+
+  config.vm.define "db" do |db|
+    db.vm.box = "mysql"
+  end
+end
+....
+
+
+== Rancher
+
+---
+
+=== Installation
+
+==== CentOS 7 / Docker
+[source,bash]
+....
+20  yum -y install yum-utils device-mapper-persistent-data lvm2
+  21  yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  22  yum list docker-ce --showduplicates | sort -r
+  23  yum
+  24  yum -y install docker-ce
+  25  yum list docker-ce --showduplicates | sort -r
+  26  yum install docker-ce-17.12.1.ce-1.el7.centos
+  27  systemctl start docker
+  28  systemctl status docker
+  29  clear
+  30  docker run -d --restart=unless-stopped -p 8080:8080 rancher/server:stable
+....
+
+'''''
+
+== LXD
+
+---
+
+=== Useful Commands
+
+==== Security
+
+===== Set privileged
+`lxc config set security.privileged true/false` +
+
+===== Disabled app armor
+....
+lxc config set CONTAINER raw.lxc "lxc.aa_profile=unconfined"
+....
+
+===== allow nfs mounts apparmor
+....
+lxc config set CONTAINER raw.apparmor "mount fstype=nfs,"
+....
+
+==== Nesting
+`lxc launch xenial container1 -p default -p docker`
+`lxc config set container1 security.nesting true`
+
+
+=== Networking
+
+==== Netplan bridges
+
+[source,yaml]
+----
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    ens3:
+      dhcp4: false
+  bridges:
+      br0:
+          interfaces: [ens3]
+          dhcp4: true
+----
+
+'''''

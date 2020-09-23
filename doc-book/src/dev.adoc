@@ -1,0 +1,298 @@
+= Development: Procedures, configs, examples and instructions for software development
+Nick Ferguson <contact@nickcrew.xyz>
+v1.0, September 7, 2018
+:toc: left
+:toclevels: 5
+:source-highlighter: pygments
+
+---
+
+== Python Dev Environment
+---
+=== Editors
+
+==== Atom Editor
+
+You need these packages installed on your local system, use pip for best
+results, otherwise apt/yum.
+
+1.  pep8
+2.  flake8
+3.  pip if you want to use `pip install`
+
+===== Packages
+
+1.  linter, linter-flake8, linter-ui-default
+2.  autocomplete-python
+3.  python-autopep8
+4.  python-indent - auto indentation according to pep8
+5.  python-tools
+6.  script - if you want to run code inside atom
+
+*also helpful*:
+
+1.  multicursor
+2.  minimap
+3.  indent-guide-improved
+4.  intentions
+5.  file-icons
+6.  autocomplete-paths
+7.  vim-mode-plus - if you want vim bindings
+
+---
+
+=== Operating Systems
+
+==== Ubuntu 18.04 Dev Environment
+
+===== Packages
+
+[source,bash]
+....
+apt install python3-dev python3-venv python3-setuptools python3-setuptools-git python3-pip build-essential libffi-dev
+....
+
+`mkdir -p ~/environments` +
+
+==== pyenv
+
+*install:* +
+`curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash` +
+
+*add to ~/.bash_profile:* +
+
+[source,bash]
+....
+export PATH="/home/nick/.pyenv/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+
+if [ -f ~/.bashrc ]; then
+  . ~/.bashrc
+fi
+....
+
+==== pipsi (macOS)
+
+*To install from master:* +
+`curl -O https://raw.githubusercontent.com/mitsuhiko/pipsi/master/get-pipsi.py` +
+`python3 get-pipsi.py --src=git+https://github.com/mitsuhiko/pipsi.git#egg=pipsi` +
+
+*fix "pipsi list" error:* +
+`vi .local/venvs/pipsi/package_info.json' +
+
+[source,json]
+....
+{"name": "pipsi", "version": "0.10.dev", "scripts": ["/Users/nickferguson/.local/bin/pipsi"]}
+....
+
+=== Python Project Dir Organization
+
+==== Simple CLI App
+
+....
+helloworld/
+│
+├── .gitignore
+├── helloworld.py
+├── LICENSE
+├── README.md
+├── requirements.txt
+├── setup.py
+└── tests.py
+....
+
+==== Installable Single Package
+
+....
+helloworld/
+│
+├── helloworld/
+│   ├── __init__.py
+│   ├── helloworld.py
+│   └── helpers.py
+│
+├── tests/
+│   ├── helloworld_tests.py
+│   └── helpers_tests.py
+│
+├── .gitignore
+├── LICENSE
+├── README.md
+├── requirements.txt
+└── setup.py
+....
+
+==== App w/ Internal Packages
+
+....
+helloworld/
+│
+├── bin/
+│
+├── docs/
+│   ├── hello.md
+│   └── world.md
+│
+├── helloworld/
+│   ├── __init__.py
+│   ├── runner.py
+│   ├── hello/
+│   │   ├── __init__.py
+│   │   ├── hello.py
+│   │   └── helpers.py
+│   │
+│   └── world/
+│       ├── __init__.py
+│       ├── helpers.py
+│       └── world.py
+│
+├── data/
+│   ├── input.csv
+│   └── output.xlsx
+│
+├── tests/
+│   ├── hello
+│   │   ├── helpers_tests.py
+│   │   └── hello_tests.py
+│   │
+│   └── world/
+│       ├── helpers_tests.py
+│       └── world_tests.py
+│
+├── .gitignore
+├── LICENSE
+└── README.md
+....
+
+==== Web Apps
+
+===== Django
+
+....
+project/
+│
+├── project/
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
+│
+└── manage.py
+....
+
+After running `manage.py startapp app` +
+....
+app/
+│
+├── migrations/
+│   └── __init__.py
+│
+├── __init__.py
+├── admin.py
+├── apps.py
+├── models.py
+├── tests.py
+└── views.py
+....
+
+....
+project/
+│
+├── app/
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   │
+│   ├── migrations/
+│   │   └── __init__.py
+│   │
+│   ├── models.py
+│   ├── tests.py
+│   └── views.py
+│
+├── docs/
+│
+├── project/
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
+│
+├── static/
+│   └── style.css
+│
+├── templates/
+│   └── base.html
+│
+├── .gitignore
+├── manage.py
+├── LICENSE
+└── README.md
+....
+
+==== Flask
+
+....
+flaskr/
+│
+├── flaskr/
+│   ├── ___init__.py
+│   ├── db.py
+│   ├── schema.sql
+│   ├── auth.py
+│   ├── blog.py
+│   ├── templates/
+│   │   ├── base.html
+│   │   ├── auth/
+│   │   │   ├── login.html
+│   │   │   └── register.html
+│   │   │
+│   │   └── blog/
+│   │       ├── create.html
+│   │       ├── index.html
+│   │       └── update.html
+│   │
+│   └── static/
+│       └── style.css
+│
+├── tests/
+│   ├── conftest.py
+│   ├── data.sql
+│   ├── test_factory.py
+│   ├── test_db.py
+│   ├── test_auth.py
+│   └── test_blog.py
+│
+├── venv/
+│
+├── .gitignore
+├── setup.py
+└── MANIFEST.in
+....
+
+---
+
+== Ruby Env Set-up
+---
+=== Ubuntu 18.04
+
+*Get the GPG Key:* +
+`gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+` +
+
+*Get RVM:* +
+`\curl -sSL https://get.rvm.io -o rvm.sh` +
+
+*Install RVM:* +
+`cat rvm.sh | bash -s stable` +
+
+`source ~/.rvm/scripts/rvm` +
+
+*Install ruby:* +
+`rvm install ruby --default` +
+
+*Confirm:* +
+`ruby -v` +
+
+---

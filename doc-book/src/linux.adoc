@@ -1,0 +1,637 @@
+= Linux Docs: Useful info about services, configurations, and tasks involved in administering Linux systems
+Nick Ferguson <contact@nickcrew.xyz>
+v1.0, September 7, 2018
+:toc: left
+:toclevels: 6
+:source-highlighter: pygments
+
+---
+
+== Common Issues
+
+=== Processes
+
+==== accounts-daemon
+
+`accounts-daemon` is a dbus process that sometimes causes cpu usage to spike. To disable it:
+
+[source,bash]
+....
+sudo mv /usr/share/dbus-1/system-services/org.freedesktop.Accounts.service /usr/share/dbus-1/system-services/org.freedesktop.Accounts.service.disabled
+....
+
+---
+
+
+
+== Autofs
+
+---
+
+=== Config files
+
+==== /etc/sysconfig/autofs
+add:
+
+[source,bash]
+....
+MASTER_MAP_NAME="auto.master"  #defines default primary configuration file
+TIMEOUT=300 #the maximum idle time (in seconds) after which filesystem is unmounted
+NEGATIVE_TIMEOUT=60 #negative timeout for failed mount attempts (default 60)
+LOGGING="verbose" #enable logging (read logs to /var/log/messages
+MOUNT_NFS_DEFAULT_PROTOCOL=4 #default protocol used by mount.nfs
+BROWSE_MODE="yes" #set to yes by default. Set it to NO and autofs only creates mount points when something i
+
+....
+
+***
+==== /etc/auto.master
+Comment out everything except:
+....
+#+auto.master
+
+/autofs /etc/auto.nfs --timeout=300
+....
+
+***
+==== /etc/auto.nfs
+
+[source,bash]
+....
+public 192.168.1.145:/Public
+repos 192.168.1.145:/Repos
+backups 192.168.1.1.145:/Backups
+....
+
+***
+
+== LVM
+
+---
+
+=== Settings
+
+==== Libvirt guests on LVM
+
+....
+virt-xml \`\`test\` \`--edit all --disk discard=unmap
+....
+
+`systemctl enable fstrim.timer` `systemctl start fstrim.timer`
+
+Add controller: SCSI / Virtio SCSI Disk bus: SCSI
+
+=== Administration
+
+==== Snapshots
+
+===== Take snapshot
+`lvcreate -L5G -s -n snapname /dev/vg/lvname` +
+
+===== Reduce lv
+`lvresize --resizefs --size 120G /dev/rhel_kvm-4/images` +
+
+===== Partclone
+Create clone: +
+`partclone.ext4 -c -s /dev/rhel_kvm-4/rootsnap -o /mnt/ops/rootsnap.pcl` +
+
+Restore: +
+`partclone.ext4 -r -s /mnt/data/backup.pcl -o /dev/fingolfin_vg/home_snap_lv` +
+
+---
+
+== NFS
+
+---
+
+=== Security
+
+==== NFS Kerberos
+
+`ipa-getkeytab -s freeipa.piggah.lan -p nfs/freeipa.piggah.lan -k /etc/krb5.keytab` +
+
+==== Use NFSv4 Secure
+`# perl -npe 's/#SECURE_NFS="yes"/SECURE_NFS="yes"/g' -i /etc/sysconfig/nfs`
+exports: `sec=sys:krb5:krb5i:krb5p` +
+
+....'
+
+==== Anonymous NFS
+export settings: +
+`/nfsdata *(rw,all_squash)` +
+`chown -R nfsnobody:nfsnobody /nfsdata`
+
+---
+
+== RHEL/CentOS 7 Hypervisor Standard Set-up
+
+---
+
+=== Subscription
+....
+subscription-manager register --username piggah \
+--password mypassword --auto-atach
+....
+
+`subscription-manager refresh` +
+`yum update -y` +
+
+=== Packages
+
+==== qemu-kvm-ev package
+`$ vi /etc/yum.repos.d/qemu-kvm-rhev.repo` +
+
+[source,bash]
+....
+[qemu-kvm-rhev]
+name=oVirt rebuilds of qemu-kvm-rhev
+baseurl=http://resources.ovirt.org/pub/ovirt-4.`/rpm/el7Server/
+mirrorlist=http://resources.ovirt.org/pub/yum-repo/mirrorlist-ovirt-4.1-el7Server
+enabled=1
+skip_if_unavailable=1
+gpgcheck=0
+....
+`yum update` +
+`systemctl restart libvirtd` +
+
+***
+
+==== Common Packages
+....
+yum -y install \
+tmux \
+libnfs-utils nfs-utils \
+htop glances virt-top \
+hdparm \
+vsftpd \
+....
+
+***
+==== EPEL Repo
+`sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm` +
+`yum update` +
+
+***
+==== Fix SSH X Forwarding Fonts
+`yum -y install dejavu-sans-fonts` +
+
+***
+
+---
+
+=== Subscription
+....
+subscription-manager register --username piggah \
+--password mypassword --auto-atach
+....
+
+`subscription-manager refresh` +
+`yum update -y` +
+
+=== Packages
+
+==== qemu-kvm-ev package
+`$ vi /etc/yum.repos.d/qemu-kvm-rhev.repo` +
+....
+[qemu-kvm-rhev]
+name=oVirt rebuilds of qemu-kvm-rhev
+baseurl=http://resources.ovirt.org/pub/ovirt-4.`/rpm/el7Server/
+mirrorlist=http://resources.ovirt.org/pub/yum-repo/mirrorlist-ovirt-4.1-el7Server
+enabled=1
+skip_if_unavailable=1
+gpgcheck=0
+....
+`yum update` +
+`systemctl restart libvirtd` +
+
+***
+
+==== Common Packages
+....
+yum -y install \
+tmux \
+libnfs-utils nfs-utils \
+htop glances virt-top \
+hdparm \
+vsftpd \
+....
+
+***
+==== EPEL Repo
+`sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm` +
+`yum update` +
+
+***
+==== Fix SSH X Forwarding Fonts
+`yum -y install dejavu-sans-fonts` +
+
+***
+
+== Linux Security
+
+---
+
+=== SELinux
+
+* Implements *MAC* Mandatory Access Control
+* Defines what a _user_ or _process_ can do
+* *DAC* Discretionary Access Control is the standard Linux security implementation
+
+TIP: Confines every process to its own domain so the process can interact with only certain types of files and other processes from allowed domains
+
+==== Packages related to SELinux
+
+* policycoreutils (provides utilities for managing SELinux)
+* policycoreutils-python (provides utilities for managing SELinux)
+* selinux-policy (provides SELinux reference policy)
+* selinux-policy-targeted (provides SELinux targeted policy)
+* libselinux-utils (provides some tools for managing SELinux)
+* setroubleshoot-server (provides tools for deciphering audit log messages)
+* setools (provides tools for audit log monitoring, querying policy, and file context management)
+* setools-console (provides tools for audit log monitoring, querying policy, and file context management)
+* mcstrans (tools to translate different levels to easy-to-understand format)
+
+==== Settings
+
+*Modes* +
+_Enforcing, Disabled, Permissive_ +
+
+*Check the current mode:* +
+`$ getenforce` or `$ sestatus` +
+
+`$ setenforce permissive` change the mode +
+
+Permissive mode: SELinux errors and access denials will be reported but it won't stop anything +
+`$ cat /var/log/messages | grep "SELinux is preventing"` +
+`$ cat /var/log/messages | grep "SELinux"` +
+
+==== Terms
+- A *role* is like a gateway that sits between a user and a process.
+    * A role defines which users can access that process, like a filter
+    * The *definition* of a role in SELinux policy defines which users have access to that role.
+    * SELinux implents *RBAC* Role Based Access Control
+- SELinux has a set of pre-built *users*. Every regular Linux user account is mapped to one or more SELinux users.
+- A *subject* is a process and can potentially affect an *object*.
+    * An object in SELinux is anything that can be acted upon. (file, a directory, a port, a tcp socket, the cursor)
+    * The actions that a subject can perform on an object are the subject's *permissions*.
+- A *type* is the context for a file's context that stipulates the file's purpose. +
+
+==== SELinux Policy
+
+TIP: SELinux policy defines user access to roles, role access to domains, and domain access to types. First the user has to be authorized to enter a role, and then the role has to be authorized to access the domain. The domain in turn is restricted to access only certain types of files.
+
+Policy implementations are typically _targeted_ by default. +
+
+If a DAC rule prohibits a user access to a file, SELinux policy rules won't be evaluated because the first line of defense has already blocked access. +
+
+*Show modules currently loaded in memory:* +
+`$ semodule -l` +
+
+*See the active policy:* +
+`$ ls -l /etc/selinux/targeted/policy/` +
+
+*View boolean switches and their status:* +
+`$ semanage boolean -l | less` +
+
+[source,bash]
+....
+ftp_home_dir                   (off  ,  off)  Allow ftp to home dir
+smartmon_3ware                 (off  ,  off)  Allow smartmon to 3ware
+mpd_enable_homedirs            (off  ,  off)  Allow mpd to enable homedirs
+xdm_sysadm_login               (off  ,  off)  Allow xdm to sysadm login
+xen_use_nfs                    (off  ,  off)  Allow xen to use nfs
+mozilla_read_content           (off  ,  off)  Allow mozilla to read content
+ssh_chroot_rw_homedirs         (off  ,  off)  Allow ssh to chroot rw homedirs
+mount_anyfile                  (on   ,   on)  Allow mount to anyfile
+....
+
+*Check state of a switch:* +
+`$ getsebool ftpd_anon_write` +
+
+*Change the state:* +
+`$ getsebool ftpd_anon_write on` +
+
+==== Files and Processes
+
+TIP: With SELinux, a process or application will have only the rights it needs to function and NOTHING more.
+
+*ls with security context:* +
+`$ ls -Z` +
+`-rw-r--r--. root root system_u:object_r:locale_t:s0    /etc/locale.conf` +
+user context : role : type : security context +
+
+Users are suffixed by "_u", roles by "_r" +
+
+*_allow statement_ structure (processes)* +
+`allow <domain> <type>:<class> { <permissions> };` +
+Class defines what the resource actually represents (file, directory, symbolic link, device, ports, cursor etc.) +
+
+*Check the type of access allowed for a daemon or process:* +
+`$ sesearch --allow --source httpd_t --target httpd_sys_content_t --class file` +
+
+[source,bash]
+....
+ Found 4 semantic av rules:
+   *allow httpd_t httpd_sys_content_t : file { ioctl read getattr lock open } ;*
+   allow httpd_t httpd_content_type : file { ioctl read getattr lock open } ;
+   allow httpd_t httpd_content_type : file { ioctl read getattr lock open } ;
+   allow httpd_t httpdcontent : file { ioctl read write create getattr setattr lock append unlink link rename execute open } ;
+....
+
+*Restore context:* +
+`$ restorecon` +
+
+TIP: Conveniently, SELinux "remembers" the context of every file or directory in the server. In CentOS 7, contexts of files already existing in the system are listed in the /etc/selinux/targeted/contexts/files/file_contexts file.
+
+`$ cat /etc/selinux/targeted/contexts/files/file_contexts` +
+....
+/usr/(.*/)?lib(/.*)?    system_u:object_r:lib_t:s0
+/opt/(.*/)?man(/.*)?    system_u:object_r:man_t:s0
+....
+
+*Write a new context:* +
+`$ semanage fcontext --add --type httpd_sys_content_t "/www(/.*)?"`` +
+`$ semanage fcontext --add --type httpd_sys_content_t "/www/html(/.*)?"` +
+
+*Check if context is verified:* +
+`$ matchpathcon -V /www/html/index.html` +
+
+*Domain transition* is the method where a process changes its context from one domain to another. +
+
+---
+
+== SNMP
+
+---
+
+=== Config File for Linux Hosts
+
+....
+rocommunity "My Community"
+view systemview included .1.3.6.1.4.1.2021
+view systemview included .1.3.6.1.2.1.2.2.1
+....
+
+***
+
+==== check_mk_agent
+`cd /opt` +
+`git clone https://github.com/librenms/librenms-agent.git` +
+`cd librenms-agent` +
+
+ `cp check_mk_agent /usr/bin/check_mk_agent` +
+ `mkdir -p /usr/lib/check_mk_agent/plugins /usr/lib/check_mk_agent/local` +
+
+ Copy each of the scripts from agent-local/ into /usr/lib/check_mk_agent/local that you require to be graphed. You can find detail setup instructions for specific applications above.
+
+ systemctl enable check_mk.socket && systemctl start check_mk.socket +
+
+ ***
+
+== ZFS
+
+---
+
+=== System Configuration
+
+==== Needed services
+
+....
+systemctl enable zfs-import-cache
+systemctl enable zfs-import-scan
+systemctl enable zfs-mount
+systemctl enable zfs-share
+systemctl enable zfs-zed
+systemctl enable zfs.target
+....
+
+....'
+
+==== Linux Kernel
+
+When loading the ``zfs'' kernel module, make sure to set a maximum
+number for the ARC. Doing a lot of ``zfs send'' or snapshot operations
+will cache the data. If not set, RAM will slowly fill until the kernel
+invokes OOM killer, and the system becomes responsive. I have set in my
+`/etc/modprobe.d/zfs.conf` file `"options zfs zfs_arc_max=2147483648"`,
+which is a 2 GB limit for the ARC. ***
+
+=== Tuning
+
+==== Compression
+
+`zfs set compression=lz4 mypool`
+
+....'
+
+== iptables
+
+---
+
+=== Rules
+
+Packets are matched based on rules, actions taken based on matches +
+
+TIP: iptables is front end to the kernel-level netfilter hooks that can manipulate the Linux network stack
+
+==== Chains
+
+The action that takes place is called a *target*. +
+
+Rules are organized into groups called *chains*. +
+Packets are checked against rules in a chain sequentially. When a packet matches a rule in the chain the
+action is executed and not checked against remaining rules. +
+
+Chains can be created as needed. The 3 default chains are: +
+
+- *INPUT* handles packets addresses to the server
+- *OUTPUT* handles packets created by server
+- *FORWARD* handles traffic not created by the server and destined for other servers. This is how you configure a router +
+
+==== Policy
+
+The *policy* determines what happens when a packet drops through all of the rules in the chain and does not match any rule. You can either drop the packet or accept the packet if no rules match. +
+
+*How iptables directs packets that come through its interface:* direct the packet to the appropriate chain, check it against each rule until one matches, issue the default policy of the chain if no match is found +
+
+WARNING: *Order of chains matters* Specific > General +
+A chain with the default policy of ACCEPT will contain rules that explicitly drop packets. A chain that defaults to DROP will contain exceptions for packets that should be specifically accepted. +
+
+....'
+
+==== Example Configs
+
+.Standard Router
+[source,bash]
+....
+# /etc/network/iptables
+*nat
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+
+# enp10s0f0is WAN, enp10s0f1 is LAN
+# NAT Masquerade
+-A POSTROUTING -o enp10s0f0 -j MASQUERADE
+
+COMMIT
+
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+
+# Service Rules
+
+## Internal
+## basics
+-A INPUT -s 127.0.0.0/8 -d 127.0.0.0/8 -i lo -j ACCEPT
+-A INPUT -p icmp -j ACCEPT
+-A INPUT -m state --state ESTABLISHED -j ACCEPT
+## SSH/DNS/DHCP/TFTP(PXE)
+-A INPUT -i enp10s0f1 -p tcp --dport 22 -j ACCEPT
+-A INPUT -i enp10s0f1 -p tcp --dport 53 -j ACCEPT
+-A INPUT -i enp10s0f1 -p udp --dport 53 -j ACCEPT
+-A INPUT -i enp10s0f1 -p udp --dport 67:68 -j ACCEPT
+-A INPUT -i enp10s0f1 -p udp --dport 69 -j ACCEPT
+-A INPUT -i enp10s0f1 -p tcp --dport 80 -j ACCEPT
+
+## External
+## http/https
+-A INPUT -i enp10s0f0 -p tcp --dport 80 -j ACCEPT
+-A INPUT -i enp10s0f0 -p tcp --dport 443 -j ACCEPT
+## traceroute rejections
+-A INPUT -p udp -m udp --dport 33434:33523 -j REJECT --reject-with icmp-port-unreachable
+
+## drop the remainder
+-A INPUT -j DROP
+
+# Forwarding
+
+## Simple defaults
+## allow established
+-A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+## allow local
+-A FORWARD -i enp10s0f0 -o enp10s0f1 -j ACCEPT
+
+## drop the remainder
+-A FORWARD -j DROP
+
+COMMIT
+....
+
+---
+
+== Network Utilities
+
+---
+
+=== Linux Tools
+
+==== netcat
+
+*Check if remote host is listening on X port:* +
+`$ nc -zv host.example.com 8080` +
+_Can also give a port range_ +
+
+....'
+
+==== ip
+_deprecates ifconfig_ +
+
+.Create multiple routing tables
+[source,bash]
+----
+ip route add 192.168.50.0/24 dev eth0 tab 1
+ip route add 192.168.80.0/24 dev vlan80 tab 2
+ip route add 192.168.99.0/24 dev vlan99 tab 3
+
+ip route add default via 192.168.50.1 dev eth0 tab 1
+ip route add default via 192.168.80.1 dev vlan80 tab 2
+ip route add default via 192.168.99.1 dev vlan99 tab 3
+
+ip rule add from 192.168.50.190 tab 1 priority 100
+ip rule add from 192.168.80.127 tab 2 priority 200
+ip rule add from 192.168.99.29 tab 3 priority 300
+
+ip route flush cache
+ip route show tab 1
+----
+
+....'
+
+==== tcpdump
+
+Capture and write to file +
+`$ tcpdump -w 08232010.pcap -i eth0` +
+
+Capture from specific interface +
+`$ tcpdump -i eth0` +
+
+Capture packets destined for specific host/port +
+`$ tcpdump -w xpackets.pcap -i eth0 dst 10.181.140.216 and port 22` +
+
+Capture all packets received on particular port +
+`$ tcpdump -i eth0 port 22` +
+
+Read from saved file +
+`$ tcpdump -tttt -r data.pcap` +
+
+
+....'
+
+==== ss
+
+`$ ss -lt` Show listening sockets +
+
+`-pl` Show processes owning a socket +
+
+`-tl` only tcp +
+`-ul` only udp +
+`-x` only unix +
+
+`-ltm` show memory usage of sockets +
+
+`-s` summary +
+
+`-t` show based on state (established, etc) +
+
+
+....'
+
+==== SSH
+
+===== Tunnels
+
+`-L` local port forwarding +
+`-f` run in background +
+`-N` do not execute command on remote system +
+
+*Port Forwarding:* +
+`$ ssh -L 9000:awebsite.com:80 user@example.com` +
+Thus a local connection to 127.0.0.1:9000 connects
+to http://awebsite.com:80 +
+
+....'
+
+==== nmap
+
+`-f` scans 100 most common ports +
+`-p` port +
+
+===== scan local network
+(or host, or range, etc)
+`$ nmap -sV -p 1-65535 192.168.0.1/24` +
+
+===== Scan Types
+
+`-sS` half-open, does not establish full TCP connection +
+`-sT` full TCP +
+`-A` detect OS and services +
+`-sV` scan for running service +
+`--version-intensity 5` "louder", find services unconventional ports +
+`-oN output.txt` save output to file +
+`--script=ssl-heartbleed` scan with a script +
+
+....'

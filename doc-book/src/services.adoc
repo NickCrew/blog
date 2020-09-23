@@ -1,0 +1,515 @@
+= Services: Configurations and HowTos for various add-on services and applications
+Nick Ferguson <contact@nickcrew.xyz>
+v1.0, September 7, 2018
+:toc: left
+:toclevels: 6
+:source-highlighter: pygments
+
+---
+
+== CTFd
+---
+=== Components
+
+==== MariaDB
+
+*DB Creation:* +
+[source,sql]
+....
+CREATE DATABASE ctfd ;
+CREATE USER 'CTFduser' IDENTIFIED BY 'ctfd';
+GRANT ALL ON ctfd.* TO 'CTFduser'@'%' IDENTIFIED BY 'ctfd';
+FLUSH PRIVILEGES ;
+exit ;
+....
+
+---
+
+==== Nginx
+
+*Port forwarding:* +
+....
+location /ctf/ {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Scheme $scheme;
+        proxy_set_header X-Script-Name /ctf;
+        proxy_pass http://127.0.0.1:8000;
+    }
+....
+
+---
+
+`sudo curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose` +
+
+---
+== Firewalld
+---
+
+=== Commands
+
+==== Add a service to a given zone: +
+`# firewall-cmd --zone=public --add-service snmp --permanent` +
+or `--remove-service=` +
+
+==== Add interface to zone
+`# firewall-cmd --zone=dmz --add-interface=eth0` +
+
+==== Set the default zone
+`# firewall-cmd --set-default-zone=dmz` +
+
+==== Get the configuration for a zone: +
+`# firewall-cmd --zone=public --list-all` +
+
+==== Port-based setting: +
+`sudo firewall-cmd --zone=public --add-port=12345/tcp --permanent` +
+`sudo firewall-cmd --zone=public --remove-port=12345/tcp --permanent` +
+
+==== Port Forwarding
+
+*(same server)* +
+`# firewall-cmd --zone="public" --add-forward-port=port=80:proto=tcp:toport=12345` +
+
+*(different server)* +
+`# firewall-cmd --zone=public --add-masquerade` +
+
+`# sudo firewall-cmd --zone="public" --add-forward-port=port=80:proto=tcp:toport=8080:toaddr=123.456.78.9` +
+
+
+
+=== Services snippets
+
+==== snmp
+[source,xml]
+....
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+  <short>SNMP</short>
+  <description>SNMP protocol</description>
+  <port protocol="udp" port="161"/>
+</service>
+....
+
+---
+== FreeIPA
+---
+
+=== Common
+
+==== Get a keytab
+
+[source,bash]
+....
+ipa-getkeytab -s freeipa.piggah.lan -p $SERVICE/freeipa.piggah.lan -k /etc/krb5.keytab
+....
+
+==== sudo with nopasswd
+add `!authenticate` to sudo rule options +
+
+'''''
+
+==== /etc/nsswitch.conf
+For sudo rules to be read from freeipa: +
+`sudoers: file *sss*` +
+
+==== DNS trusted SSH
+__/etc/ssh/sshd_config__
+`AuthorizedKeysCommand /usr/bin/sss_ssh_authorizedkeys`
+
+
+=== Foreman Realm Integration
+
+.Installation Commands
+[source,bash]
+....
+#enrol foreman in ipa
+    3 yum install ipa-admintools
+    4 foreman-prepare-realm admin foreman-user
+    5
+    6 cp freeipa.keytab  /etc/foreman-proxy/freeipa.keytab
+    7 chown foreman-proxy /etc/foreman-proxy/freeipa.keytab
+    8     chmod 600 /etc/foreman-proxy/freeipa.keytab
+    9
+   10
+   11 vi /etc/foreman-proxy/settings.d/realm.yml
+   12 #enabled true
+   13
+   14 vi /etc/foreman-proxy/settings.d/realm_freeipa.yml
+   15
+   16 systemctl restart foreman-proxy
+   17
+   18
+   19 chaned principal to admin@int.example.net ??
+   20
+   21 cp /etc/ipa/ca.crt /etc/pki/ca-trust/source/anchors/ipa.crt
+   22 root@foreman:~# update-ca-trust enable
+   23 root@foreman:~# update-ca-trust
+   24
+   25
+   26
+   27 #on ipa
+   28 ipa hostgroup-add webservers
+   29
+   30
+   31 #tried adding new host couldn't enrol in realm
+   32
+   33 #confirmed
+   34 sudo -u foreman-proxy kinit -k -t /etc/foreman-proxy/freeipa.keytab foreman-user
+   35
+   36 #within freeipa dns added PTR Sync option
+
+# Authentication for Kerberos-based Realms
+:keytab_path: /etc/foreman-proxy/freeipa.keytab
+:principal: foreman-user@INT.EXAMPLE.NET
+
+:ipa_config: /etc/ipa/default.conf
+# Remove from DNS when deleting the FreeIPA entry
+:remove_dns: true
+
+**ipa-getkeytab -p foreman-user@PIGGAH.LAN -k /root/keytest
+....
+
+==== Config Files
+
+===== /etc/foreman-proxy/settings.d/freeipa_realm.yml
+....
+---
+# Authentication for Kerberos-based Realms
+:keytab_path: /etc/foreman-proxy/freeipa.keytab
+:principal: foreman-user@PIGGAH.LAN
+
+:ipa_config: /etc/ipa/default.conf
+# Remove from DNS when deleting the FreeIPA entry
+:remove_dns: true
+....
+
+===== /etc/foreman-proxy/settings.d/realm.yml
+
+....
+---
+# Can be true, false, or http/https to enable just one of the protocols
+:enabled: true
+
+# Available providers:
+#   realm_ad
+#   realm_freeipa
+:use_provider: realm_freeipa
+....
+
+'''''
+
+=== DHCPd and FreeIPA DDNS (w/ pfsense)
+
+....
+Here is how to configure things:
+
+BIND-side:
+
+1. Open /etc/named.conf in a root editor
+2. Insert a key like this:
+
+key "dhcp-key" {
+   algorithm   hmac-md5;
+   secret   “base64_string_here=";
+};
+
+Where the string “dhcp-key” can be anything, but you should remember what you put in there.
+The Secret is a base64 string, if you are slightly clueless about that, use: echo “yoursecrethere” | base64
+and you will get your base64 string. Stick it in between the quotes and you’re good.
+
+3. Next, log in to the IPA UI and go to the Zone you’d like to have DHCP dynamically push to.
+4. Click settings and turn on “Dynamic update” if it’s not on already
+5. Add an update policy, in this format:
+
+grant dhcp-key wildcard * ANY;
+
+This is rather insecure as you give anything that authenticates using the key called “dhcp-key” full update rights for all types on that zone.
+So if you want to restrict it, do so as you please. I believe it at least wants A and AAAA records and probably TXT.
+
+6. Click the update button and you are all set on this end. Note: if you want to have reverse lookups as well, you have to repeat step 5 for the reverse zone too!
+
+pfSense-side:
+
+1. In pfSense, go to the DHCP server page
+2. Enable "Enable registration of DHCP client names in DNS.”
+3. Enter the domain name of the zone you configured in IPA for dynamic updates
+4. Enter the required fields (IP of the IPA server, the name (which is dhcp-key in this example) and the base64 string you generated
+5. Press save and you’re good!
+....
+
+'''''
+
+== Nginx
+---
+=== Proxying
+
+Proxy to internal port using vhost
+
+create vhost:
+
+`$ vi /etc/nginx/sites-available/example.com`
+
+....
+server {
+listen 80;
+server_name example.com;
+location / {
+proxy_pass http://example.com:3000;
+}
+}
+....
+
+`$ ln -s /etc/nginx/sites-available/example.com /etc/nginx/sites-enabled/` +
+`$ systemctl restart nginx` ***
+
+---
+== OpenVPN
+---
+=== Configuration
+
+==== DNS
+
+Local DNS Resolution
+
+edit: `/etc/openvpn/server.conf` +
+`push "dhcp-option DNS 192.168.1.1"` +
+
+---
+== PostgreSQL
+---
+
+=== History
+[source,bash]
+....
+yum -y install postgresql-server postgresql-contrib
+cd /usr/bin
+./postgresql-setup initdb
+   87  systemctl enable postgresql
+   88  systemctl start postgresql
+   89  systemctl status postgresql
+   90  netstat -plntu
+   91  ss -plntu
+   92  su - postgres
+   93  systemctl disable firewalld
+   94  systemctl stop firewalld
+   95  vi /etc/sysconfig/selinux
+   96  cd /var/lib/
+   97  ls
+   98  cd pgsql/
+   99  ls
+  100  cd data/
+  101  ls
+  102  vi postgresql.conf
+  mkdir -p archive
+  110  chmod 700 archive/
+  111  chown -R postgres:postgres archive/
+  112  vi data/pg_hba.conf
+  113  ip a sh
+  114  vi data/pg_hba.conf
+  115  systemctl restart postgresql
+  116  journalctl -xe
+  117  vi /var/lib/pgsql/data/postgresql.conf
+  118  systemctl restart postgresql
+  119  systemctl status postgresql
+....
+
+=== On Master
+
+[source,bash]
+....
+listen_addresses = '192.168.50.200'
+wal_level = hot_standby
+synchronous_commit = local
+archive_mode = on
+ archive_command = 'cp %p /var/lib/pgsql/9.6/archive/%f'
+ max_wal_senders = 2
+ wal_keep_segments = 10
+ synchronous_standby_names = 'pgslave01'
+....
+
+[source,bash]
+....
+mkdir -p /var/lib/pgsql/9.6/archive/
+chmod 700 /var/lib/pgsql/9.6/archive/
+chown -R postgres:postgres /var/lib/pgsql/9.6/archive/
+....
+
+`# vim pg_hba.conf` +
+....
+# Localhost
+ host    replication     replica          127.0.0.1/8            md5
+
+ # PostgreSQL Master IP address
+ host    replication     replica          192.168.50.200/24            md5
+
+ # PostgreSQL SLave IP address
+ host    replication     replica          192.168.50.121/24            md
+....
+
+[source,bash]
+....
+su - postgres
+createuser --replication -P replica
+Enter New Password:
+....
+
+=== on slave
+[source,bash]
+....
+82  systemctl stop postgresql
+   83  cd /var/lib/pgsql/
+   84  ls
+   85  mv data/ data-backup
+   86  mkdir -p data
+   87  chmod 700 data
+   88  chown -R postgres:postgres data
+   89  su - postgres
+....
+`# vi /var/lib/pgsl/data/postgresql.conf` +
+[source,bash]
+....
+listen_addresses = 192.168.50.121
+hot_standy = on
+....
+
+`$ vi /var/lib/pgsl/data/recovery.conf` +
+[source,bash]
+....
+tandby_mode = 'on'
+primary_conninfo = 'host=192.168.50.200 port=5432 user=replica password=postgres application_name=pgslave01'
+trigger_file = '/tmp/postgresql.trigger.5432'
+....
+
+`$ chmod 600 recovery.conf` +
+`$ chown postgres:postgres recovery.conf` +
+
+=== Test
+on master:
+....
+psql -c "select application_name, state, sync_priority, sync_state from pg_stat_replication;"
+psql -x -c "select * from pg_stat_replication;"
+....
+
+....
+$ su - postgres
+$ psql
+
+CREATE TABLE replica_test (test varchar(100));
+INSERT INTO replica_test VALUES ('rawr');
+....
+on replica: +
+....
+select * from replica_test;
+....
+
+---
+
+== Redis
+---
+
+=== Initial Config
+
+`sudo apt install build-essential tcl` +
+
+==== acquire, install
+
+`cd /tmp` +
+`curl -O http://download.redis.io/redis-stable.tar.gz` +
+`tar xvzf redis-stable.tar.gz` +
+
+`cd /tmp/redis-stable` +
+`make` +
+`make test` +
+`make install` +
+
+==== /etc/redis/redis.conf settings
+
+`makedir -p /etc/redis` +
+`cp /tmp/redis-stable/redis.conf /etc/redis/redis.conf` +
+
+Find these lines and change them to: +
+`supervised systemd` +
+`dir /var/lib/redis` +
+
+To allow remote connections: +
+`bind 0.0.0.0` +
+
+'''''
+
+==== systemd file
+
+`vi /etc/systemd/system/redis.service` +
+
+[source,bash]
+....
+[Unit]
+Description=Redis In-Memory Data Store
+After=network.target
+
+[Service]
+User=redis
+Group=redis
+ExecStart=/usr/local/bin/redis-server /etc/redis/redis.conf
+ExecStop=/usr/local/bin/redis-cli shutdown
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+....
+
+'''''
+
+....
+  adduser --system --group --no-create-home redis
+  mkdir -p /var/lib/redis
+  chown redis:redis /var/lib/redis
+  chmod 770 /var/lib/redis
+....
+
+'''''
+
+== Snippets
+---
+=== Config Files
+
+==== .tmux.conf
+
+'''''
+
+.Sane Scrolling
+....
+bind -n WheelUpPane if-shell -F -t = "#{mouse_any_flag}" "send-keys -M" if -Ft= "#{pane_in_mode}" "send-keys -M" "select-pane -t=; copy-mode -e; send-keys -M"
+....
+
+....
+bind -n WheelDownPane select-pane -t= \; send-keys -M
+....
+
+'''''
+
+.vi-copy
+....
+unbind [
+bind Escape copy-mode
+unbind p
+bind p paste-buffer
+bind-key -t vi-copy 'v' begin-selection
+bind-key -t vi-copy 'y' copy-selection
+....
+
+.Alternatively
+....
+bind-key -Tcopy-mode-vi 'v' send -X begin-selection
+bind-key -Tcopy-mode-vi 'y' send -X copy-pipe-and-cancel 'xclip -in -selection clipboard'
+....
+
+'''''
+
+.xclip (linux system clipboard) compatbility
+....
+ bind -t vi-copy Y copy-pipe 'xclip -in -selection clipboard'
+....
+
+'''''
+

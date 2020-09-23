@@ -1,0 +1,293 @@
+= Tools: Usage information for major tools (CM, Provisioning, Imaging, Etc.)
+Nick Ferguson <contact@nickcrew.xyz>
+v1.0, September 7, 2018
+:toc: left
+:toclevels: 5
+:source-highlighter: pygments
+
+---
+
+== Ansible
+---
+=== Commands
+
+*Run playbook against single host:* +
+
+`ansible-playbook user.yml --extra-vars "target=my-host.local"`` +
+
+[source,yaml]
+....
+---
+- hosts: '{{ target }}'
+  user: ...
+....
+
+.Bootstrap playbook run using existing user
+[source,bash]
+....
+ansible-playbook bootstrap.yml -i hosts -k -K --extra-vars \
+"hosts=newhost.domain.com user=admin"
+....
+
+---
+
+*Using Command Line Variables:* +
+
+`ansible-playbook bootstrap.yml -i hosts -k -K --extra-vars \"hosts=newhost.domain.com user=admin"`` +
+
+[source,yaml]
+....
+- hosts: '{{ hosts }}' remote_user: '{{ user }}' sudo: yes
+....
+
+=== Roles
+
+.Example Template
+[source,yaml]
+....
+---
+- hosts: webservers
+  roles:
+     - common
+     - webservers
+....
+
+.Sample Directory Strucutre
+....
+site.yml
+webservers.yml
+fooservers.yml
+roles/
+   common/
+     tasks/
+     handlers/
+     files/
+     templates/
+     vars/
+     defaults/
+     meta/
+   webservers/
+     tasks/
+     defaults/
+     meta/
+....
+
+....
+production                # inventory file for production servers
+staging                   # inventory file for staging environment
+
+group_vars/
+   group1.yml             # here we assign variables to particular groups
+   group2.yml
+host_vars/
+   hostname1.yml          # here we assign variables to particular systems
+   hostname2.yml
+
+library/                  # if any custom modules, put them here (optional)
+module_utils/             # if any custom module_utils to support modules, put them here (optional)
+filter_plugins/           # if any custom filter plugins, put them here (optional)
+
+site.yml                  # master playbook
+webservers.yml            # playbook for webserver tier
+dbservers.yml             # playbook for dbserver tier
+
+roles/
+    common/               # this hierarchy represents a "role"
+        tasks/            #
+            main.yml      #  <-- tasks file can include smaller files if warranted
+        handlers/         #
+            main.yml      #  <-- handlers file
+        templates/        #  <-- files for use with the template resource
+            ntp.conf.j2   #  <------- templates end in .j2
+        files/            #
+            bar.txt       #  <-- files for use with the copy resource
+            foo.sh        #  <-- script files for use with the script resource
+        vars/             #
+            main.yml      #  <-- variables associated with this role
+        defaults/         #
+            main.yml      #  <-- default lower priority variables for this role
+        meta/             #
+            main.yml      #  <-- role dependencies
+        library/          # roles can also include custom modules
+        module_utils/     # roles can also include custom module_utils
+        lookup_plugins/   # or other types of plugins, like lookup in this case
+
+    webtier/              # same kind of structure as "common" was above, done for the webtier role
+    monitoring/           # ""
+    fooapp/               # ""
+....
+
+....
+inventories/
+   production/
+      hosts               # inventory file for production servers
+      group_vars/
+         group1.yml       # here we assign variables to particular groups
+         group2.yml
+      host_vars/
+         hostname1.yml    # here we assign variables to particular systems
+         hostname2.yml
+
+   staging/
+      hosts               # inventory file for staging environment
+      group_vars/
+         group1.yml       # here we assign variables to particular groups
+         group2.yml
+      host_vars/
+         stagehost1.yml   # here we assign variables to particular systems
+         stagehost2.yml
+
+library/
+module_utils/
+filter_plugins/
+
+site.yml
+webservers.yml
+dbservers.yml
+
+roles/
+    common/
+    webtier/
+    monitoring/
+    fooapp/
+....
+
+---
+
+=== Users
+
+.Become a specific user
+[source,yaml]
+....
+---
+- hosts: webservers
+  remote_user: yourname
+  become: yes
+  become_user: postgres
+....
+
+.Escalating privilegs
+[source,yaml]
+....
+become: yes
+ become_method: su
+....
+
+=== Variables
+
+.In a Playbook
+[source,yaml]
+....
+- hosts: webservers
+  vars:
+    http_port: 80
+....
+
+.From a File
+[source,yaml]
+....
+vars_files:
+    - /vars/external_vars.yml
+....
+
+---
+
+=== Integrations
+
+==== Dynamic Inventory with Vagrant
+
+*Insert this line of ruby code into your VagrantFile:* +
+
+[source,ruby]
+....
+require "fileutils" f = File.open("hosts","w") servers.each do |servers| f.puts servers["ip_addr"] end # servers.each f.close
+....
+
+_Note: This also assumes you have an `ansible.cfg` in your local directory_ +
+
+---
+
+== Foreman-Katello (Puppet)
+---
+
+=== Fixes
+
+==== Incorrect header bug
+
+_on guest:_ +
+`$ puppet agent -t —http_compression`
+
+'''''
+
+==== passenger / mod_passenger error
+
+[source,bash]
+....
+rpm -qa | grep passenger
+mod_passenger-4.0.53-4.el7.x86_64
+tfm-rubygem-passenger-4.0.18-9.10.el7.x86_64
+passenger-4.0.53-4.el7.x86_64
+tfm-rubygem-passenger-native-libs-4.0.18-9.10.el7.x86_64
+tfm-rubygem-passenger-native-4.0.18-9.10.el7.x86_64
+To make it work:
+yum remove passenger-4.0.53-4.el7.x86_64 mod_passenger-4.0.53-4.el7.x86_64
+....
+
+
+Then in `/etc/yum.repos.d/epel.repo` in the `[epel]` section +
+*add:*
+....
+exclude=passenger* mod_passenger*
+....
+
+Then reinstall `passenger` and `mod_passenger` (which then pulls from theforeman repo) +
+`yum install passenger mod_passenger` +
+
+---
+
+== Git
+---
+=== Command Line
+
+*Color ui:* +
+`git config color.ui true` +
+
+*Drop all your local changes and commits, fetch the latest history from the server and point your local master branch at it:* +
+`git reset --hard origin/master` +
+
+*Remove file from tracking but retain in folder:* +
+Add it to `.gitignore` +
+`git rm --cached <my-file>` +
+`git add .` +
+`git commit -m 'fix gitignore'` +
+`git push` +
+
+*Keep your own untracked version of a file:* +
+`git update-index --skip-worktree <path-name>` +
+
+*Do not automatically check for changes:* +
+`git update-index --assume-unchanged <path-name>` +
+
+---
+
+== Terraform
+---
+=== Modules
+
+*Import key pair into state file:* +
+`terraform import aws_key_pair.personal us-west-2` +
+
+---
+
+*Call a module:* +
+....
+module "consul" {
+  source  = "hashicorp/consul/"
+  servers = 5
+}
+....
+
+*Source a local file:* +
+`~/Code/terraform/modules/` +
+
+---
