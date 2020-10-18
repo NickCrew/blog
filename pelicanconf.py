@@ -4,8 +4,8 @@
 AUTHOR = 'Nick Ferguson'
 AUTHOR_URL = 'author/nick-ferguson.html'
 
-SITENAME = 'piggah.xyz'
-SITEURL = 'https://piggah.xyz'
+SITENAME = 'devbear.net'
+SITEURL = 'http://blog.devbear.net'
 SITESUBTITLE = 'Software Dev and MORE'
 
 TIMEZONE = 'America/New_York'

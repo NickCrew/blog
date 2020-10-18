@@ -1,0 +1,3 @@
+[submodule "pelican-themes/nice-blog"]
+	path = pelican-themes/nice-blog
+	url = https://github.com/guilherme-toti/nice-blog.git
