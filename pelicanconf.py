@@ -4,9 +4,9 @@
 AUTHOR = 'Nick Ferguson'
 AUTHOR_URL = 'author/nick-ferguson.html'
 
-SITENAME = 'devbear.net'
+SITENAME = 'DevBear.net'
 SITEURL = 'http://blog.devbear.net'
-SITESUBTITLE = 'Software Development for Bears'
+SITESUBTITLE = 'Synergizing software development with classic bear principles'
 
 TIMEZONE = 'America/New_York'
 DEFAULT_LANG = 'en'
