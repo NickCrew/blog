@@ -1,17 +1,18 @@
 PY?=python3
 PELICAN?=pelican
 PELICANOPTS=
+PWSH=pwsh
 
 BASEDIR=$(CURDIR)
 INPUTDIR=$(BASEDIR)/content
-OUTPUTDIR=$(BASEDIR)/output/*
+OUTPUTDIR=$(BASEDIR)/output
 CONFFILE=$(BASEDIR)/pelicanconf.py
 PUBLISHCONF=$(BASEDIR)/publishconf.py
 
 DOCBOOKHTML=$(BASEDIR)/doc-book/html
 DOCBOOKOUTDIR=$(BASEDIR)/output/docbook
 
-SSH_HOST=piggah.xyz
+SSH_HOST=
 SSH_TARGET_DIR=${DEPLOY_TARGET_DIR}/.
 
 DEBUG ?= 0
@@ -43,8 +44,7 @@ help:
 	@echo '   make serve [PORT=8000]              serve site at http://localhost:8000'
 	@echo '   make serve-global [SERVER=0.0.0.0]  serve (as root) to $(SERVER):80    '
 	@echo '   make devserver [PORT=8000]          serve and regenerate together      '
-	@echo '   make ssh_upload                     upload the web site via SSH        '
-	@echo '   make rsync_upload                   upload the web site via rsync+ssh  '
+	@echo '   make pwsh_upload                   upload the web site via powershell script  '
 	@echo '                                                                          '
 	@echo 'Set the DEBUG variable to 1 to enable debugging, e.g. make DEBUG=1 html   '
 	@echo 'Set the RELATIVE variable to 1 to enable relative urls                    '
@@ -74,10 +74,7 @@ devserver-global:
 publish:
 	"$(PELICAN)" "$(INPUTDIR)" -o "$(OUTPUTDIR)" -s "$(PUBLISHCONF)" $(PELICANOPTS)
 
-ssh_upload:
-	scp -rfv ./output/* piggah.xyz:/var/www/piggah.xyz/html/.
-
-publish_docbook:
-	cp -rf "$(DOCBOOKHTML)" "$(DOCBOOKOUTDIR)"
+pwsh_upload:
+	pwsh -File sendToS3.ps1
 
 .PHONY: html help clean regenerate serve serve-global devserver publish 
