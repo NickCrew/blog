@@ -12,6 +12,4 @@ phases:
       - make publish
 artifacts:
   files:
-    - '**/*'
-  base-directory: output
-  name: output
+    - 'output/**/*'
