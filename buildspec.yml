@@ -12,4 +12,6 @@ phases:
       - make publish
 artifacts:
   files:
-    - 'output/**/*'
+    - '**/*'
+    base-directory: output
+    discard-paths: no
