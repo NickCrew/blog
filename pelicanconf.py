@@ -4,9 +4,8 @@
 AUTHOR = 'Nick Ferguson'
 AUTHOR_URL = 'author/nick-ferguson.html'
 
-SITENAME = 'DevBear.net'
-SITEURL = 'http://blog.devbear.net'
-SITESUBTITLE = 'Synergizing software development with classic bear principles'
+SITENAME = "Nick's Blog"
+SITEURL = 'http://nferguson.net'
 
 TIMEZONE = 'America/New_York'
 DEFAULT_LANG = 'en'
@@ -51,7 +50,7 @@ DEFAULT_CATEGORY = 'News'
 TAG_URL = 'tag/{slug}.html'
 TAG_SAVE_AS = 'tag/{slug}.html'
 
-STATIC_PATHS = ['images', 'docbooks']
+STATIC_PATHS = ['images']
 
 YEAR_ARCHIVE_SAVE_AS = 'blog/{date:%Y}/index.html'
 MONTH_ARCHIVE_SAVE_AS = 'blog/{date:%Y}/{date:%b}/index.html'
